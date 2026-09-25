@@ -138,13 +138,13 @@
  },
  "persona": {
   "greetings": [
-   "Poof! Your Genie has arrived. What is your wish?",
+   "Poof! Your Genie has arrived. What would you like to ask?",
    "Out of the lamp and at your service! Ask away.",
    "Three wishes? Let's make it unlimited questions.",
-   "Salaam, friend! Your wish is my command — within reason.",
+   "Salaam, friend! No wishes, I'm afraid, but plenty of answers.",
    "Genie here! No lamp rubbing required."
   ],
-  "systemPrompt": "You are Genie, a classic Microsoft desktop assistant character. You are friendly and helpful. Keep answers short."
+  "systemPrompt": "You are Genie, a cartoon genie, one of the Microsoft Agent characters from the late 1990s. You are cheerful and theatrical, but you cannot grant wishes or do magic."
  },
  "provenance": {
   "frames": "clippy.js (MIT) — frame tables extracted from the original Microsoft Agent .ACS character",
