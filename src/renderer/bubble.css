@@ -72,6 +72,21 @@ body.open #bubble {
   cursor: text;
 }
 #msg:empty { display: none; }
+#msg::-webkit-scrollbar { width: 8px; }
+#msg::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 4px;
+  background: var(--hint) padding-box;
+}
+/* The scrollbar shows only while the pointer is over the reply. Its width
+   stays reserved, so the text does not reflow when it appears. */
+[data-theme] #msg:not(:hover)::-webkit-scrollbar-track,
+[data-theme] #msg:not(:hover)::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+[data-theme] #msg:not(:hover)::-webkit-scrollbar-button { background: transparent; }
 #msg.error { color: var(--error); }
 
 /* Waiting for the model: "Thinking…" with a light sweeping across it. */
