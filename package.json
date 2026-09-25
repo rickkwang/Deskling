@@ -1,7 +1,8 @@
 {
-  "name": "ai-desk-pet",
+  "name": "it-looks-like",
+  "productName": "It Looks Like",
   "version": "0.1.0",
-  "description": "Lightweight AI desktop pet. Microsoft Agent characters, local Ollama brain.",
+  "description": "It looks like you could use a hand! A tiny AI desktop assistant: Microsoft Agent characters, local Ollama brain.",
   "type": "module",
   "main": "src/main/main.js",
   "scripts": {

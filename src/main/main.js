@@ -34,6 +34,18 @@ let settings = {
   // Behavior (Assistant Settings)
   enabled: true, greeting: true, speech: false, responseStyle: 'normal', instructions: '',
 };
+// The app used to be called ai-desk-pet: carry its data over once.
+function migrateUserData() {
+  const old = path.join(app.getPath('appData'), 'ai-desk-pet');
+  const dir = app.getPath('userData');
+  if (!fs.existsSync(old) || fs.existsSync(path.join(dir, 'settings.json'))) return;
+  fs.mkdirSync(dir, { recursive: true });
+  for (const name of ['settings.json', 'characters']) {
+    const from = path.join(old, name);
+    if (fs.existsSync(from)) fs.cpSync(from, path.join(dir, name), { recursive: true });
+  }
+}
+
 function loadSettings() {
   try { settings = { ...settings, ...JSON.parse(fs.readFileSync(settingsFile(), 'utf8')) }; } catch { /* first run */ }
   // Migrate the old fixed-layout window position (340x600, feet at 266,360).
@@ -462,7 +474,7 @@ function updateTray() {
 function createTray() {
   tray = new Tray(nativeImage.createEmpty());
   tray.setTitle('📎');
-  tray.setToolTip('AI Desk Pet');
+  tray.setToolTip('It Looks Like');
   updateTray();
 }
 
@@ -630,6 +642,7 @@ if (!SELFTEST && !PREVIEW && !SETTINGS_PREVIEW && !AUDIT && !app.requestSingleIn
 app.on('second-instance', () => updateSettings({ enabled: true }));
 
 app.whenReady().then(() => {
+  migrateUserData();
   loadSettings();
   // Selftest can target one character without touching saved settings.
   if (SELFTEST && arg('character')) settings.character = arg('character');
