@@ -4,12 +4,26 @@
 
 A lightweight desktop pet that is also an AI assistant. It uses Microsoft Agent characters (Clippy by default) and a model already installed in your local Ollama.
 
+## Install
+
+Download the latest `.dmg` from [Releases](https://github.com/rickkwang/Deskling/releases) (Apple silicon Macs),
+open it and drag Deskling to Applications. You also need [Ollama](https://ollama.com) with a model, e.g.
+`ollama pull qwen2.5:1.5b`.
+
+Deskling isn't signed with an Apple Developer ID, so macOS blocks the first launch: click **Done**, then
+**System Settings → Privacy & Security → Open Anyway**. If macOS says the app "is damaged", run
+`xattr -dr com.apple.quarantine /Applications/Deskling.app` once. After that it updates itself: the pet tells you
+when a new version is out, and **Update to …** in its right-click menu installs it and restarts.
+
+## Develop
+
 ```
 npm install
 npm start                      # the pet (tray 📎: show/hide/quit; right-click the pet for the menu)
 npm run selftest               # end-to-end: idle → click → listening → thinking → speaking → idle
 npm test                       # runtime semantics (exit branches, queue, idle levels)
 npm run validate               # validate every characters/*/character.json
+npm run dist                   # release/: Deskling-<version>-arm64.dmg + .zip + latest-mac.yml (ad-hoc signed)
 npm run preview -- --preview=clippy   # QA: play every animation with its state tags
 npx electron . --audit                # QA: every character — sprite cells non-empty, every animation ends visible,
                                       #     state/idle animations start and settle on the rest pose
@@ -27,6 +41,13 @@ npx electron . --selftest --edge --hold=60000 --timer-demo=60   # QA: start the 
   - **Behavior**: Greeting, Speech, Response Style (Concise, Normal, Chatty, Detailed, Friendly, Professional, Playful), local Model, the Focus timer (focus and break length in hours, minutes and seconds; the end Sound), and free-form Instructions (up to 500 characters).
 - Settings are saved to `~/Library/Application Support/Deskling/settings.json`.
 - `electron . --settings-preview=character|behavior` captures the settings window to `qa/` for QA.
+
+## Releasing
+
+Bump `version` in `package.json`, commit, then `git tag v<version> && git push origin main v<version>`.
+`.github/workflows/release.yml` runs the tests, builds the ad-hoc signed app and publishes the release with
+`.github/release-notes.md`. Installed copies find it through `latest-mac.yml` (`src/main/updater.js`): they download
+the zip, check its SHA-512, and swap the app in place, which avoids Squirrel.Mac's need for a Developer ID.
 
 ## Layout
 

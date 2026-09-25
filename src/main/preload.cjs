@@ -17,6 +17,8 @@ contextBridge.exposeInMainWorld('pet', {
   onCharacter: on('pet:character'),
   onVisibility: on('pet:visibility'),
   onChatReset: on('chat:reset'),
+  onUpdateAvailable: on('update:available'),
+  onUpdateStatus: on('update:status'),
   timer: {
     status: () => ipcRenderer.invoke('timer:status'),
     action: (action) => ipcRenderer.send('timer:action', action),

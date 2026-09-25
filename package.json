@@ -11,9 +11,56 @@
     "preview": "electron . --preview",
     "test": "node --test test/",
     "validate": "node tools/validate-character.mjs",
-    "import:clippyjs": "node tools/import-clippyjs.mjs"
+    "import:clippyjs": "node tools/import-clippyjs.mjs",
+    "dist": "electron-builder --mac dmg zip --arm64 --publish never"
   },
   "devDependencies": {
-    "electron": "^44.4.5"
+    "electron": "^44.4.5",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.rickkwang.deskling",
+    "productName": "Deskling",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "src/**/*",
+      "characters/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.productivity",
+      "identity": "-",
+      "hardenedRuntime": false,
+      "extendInfo": {
+        "LSUIElement": true
+      }
+    },
+    "dmg": {
+      "title": "Deskling"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "rickkwang",
+        "repo": "Deskling",
+        "releaseType": "release"
+      }
+    ]
   }
 }

@@ -119,7 +119,7 @@ window.pet.onBubbleEscape(() => closeBubble());
 
 const ERRORS = {
   NO_LOCAL_MODEL: "I couldn't find a local Ollama model. Pull a small one yourself (e.g. `ollama pull qwen2.5:1.5b`) — I won't download anything on my own.",
-  OLLAMA_UNAVAILABLE: "Ollama doesn't seem to be running. Start it with `ollama serve`, then ask me again.",
+  OLLAMA_UNAVAILABLE: "Ollama doesn't seem to be running. Install it from ollama.com (or start it with `ollama serve`), then ask me again.",
 };
 
 let streamed = '';
@@ -325,6 +325,26 @@ window.pet.onCharacter(async (next) => {
   await runtime.show({ greet: true });
   say(greeting());
   if (settings.greeting) openBubble();
+});
+
+// ---- updates ----------------------------------------------------------------
+// Main finds new versions; the pet mentions one (unless it is busy talking)
+// and reports on an install started from the menu.
+
+function announce(text, { error = false } = {}) {
+  if (busy) return;
+  say(text, { error });
+  runtime.setState('idle');
+  runtime.act(error ? 'confused' : 'getAttention');
+  openBubble();
+}
+
+window.pet.onUpdateAvailable((version) => {
+  announce(`Deskling ${version} is out! Right-click me and choose “Update to ${version}…” whenever you like — I'll be back in a few seconds.`);
+});
+window.pet.onUpdateStatus(({ state, version, error }) => {
+  if (state === 'downloading') announce(`Downloading Deskling ${version}… I'll restart when it's ready.`);
+  else if (state === 'failed') announce(`The update didn't work: ${error} I've opened the download page instead.`, { error: true });
 });
 
 // ---- boot -------------------------------------------------------------------

@@ -1,0 +1,38 @@
+# Push a tag vX.Y.Z (matching package.json) to build the macOS app and
+# publish it as a GitHub release. The in-app updater reads latest-mac.yml.
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  mac:
+    runs-on: macos-14
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CSC_IDENTITY_AUTO_DISCOVERY: false # no Developer ID: ad-hoc signed (package.json mac.identity)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: Tag matches package.json
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          [ "$GITHUB_REF_NAME" = "v$VERSION" ] || { echo "Tag $GITHUB_REF_NAME != v$VERSION" >&2; exit 1; }
+      - run: npm run dist
+      - run: codesign --verify --deep --strict release/mac-arm64/Deskling.app
+      - name: Publish
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          gh release create "v$VERSION" --title "Deskling $VERSION" --notes-file .github/release-notes.md --verify-tag
+          gh release upload "v$VERSION" \
+            "release/Deskling-$VERSION-arm64.dmg" \
+            "release/Deskling-$VERSION-arm64-mac.zip" \
+            release/latest-mac.yml

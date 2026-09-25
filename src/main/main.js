@@ -1,10 +1,11 @@
-import { app, BrowserWindow, ipcMain, Menu, Notification, Tray, nativeImage, screen } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, Notification, Tray, nativeImage, screen, shell } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Assistant, RESPONSE_STYLES } from '../ai/assistant.js';
 import { DragFollower } from './drag-follow.js';
 import { FocusTimer, LIMITS, validSeconds, PRESETS, SOUNDS, duration, minutesLeft } from './focus-timer.js';
+import { checkForUpdate, prepareInstall, releasePage } from './updater.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const SELFTEST = process.argv.includes('--selftest');
@@ -505,6 +506,7 @@ function buildContextMenu() {
     { type: 'separator' },
     { label: 'New Conversation', click: () => { assistant.reset(); win.webContents.send('chat:reset'); } },
     { label: 'Assistant Settings…', click: () => openSettings() },
+    ...updateMenu(),
     { type: 'separator' },
     { label: 'Quit Assistant', click: () => app.quit() },
   ]);
@@ -518,6 +520,7 @@ function updateTray() {
     { label: 'Desktop Assistant', type: 'checkbox', checked: settings.enabled, click: (item) => updateSettings({ enabled: item.checked }) },
     { label: 'Focus Timer', submenu: timerMenu() },
     { label: 'Assistant Settings…', click: () => openSettings() },
+    ...updateMenu(),
     { type: 'separator' },
     { label: 'Quit Assistant', click: () => app.quit() },
   ]));
@@ -616,6 +619,52 @@ function timerMenu() {
     })),
     { label: 'Customize…', click: () => openSettings('behavior') },
   ];
+}
+
+// ---- updates --------------------------------------------------------------
+// Packaged builds look for a newer GitHub release at launch and once a day.
+// The pet mentions a new version once; installing is the menu item's job.
+
+const UPDATE_EVERY = 24 * 60 * 60 * 1000;
+const update = { feed: null, installing: false };
+
+async function checkUpdates() {
+  try {
+    const feed = await checkForUpdate(app.getVersion());
+    if (!feed || feed.version === update.feed?.version) return;
+    update.feed = feed;
+    updateTray();
+    if (settings.updateSeen !== feed.version && win?.isVisible()) {
+      win.webContents.send('update:available', feed.version);
+      updateSettings({ updateSeen: feed.version });
+    }
+  } catch (e) {
+    console.warn(`[update] ${e.message}`);
+  }
+}
+
+async function installUpdate() {
+  if (update.installing || !update.feed) return;
+  update.installing = true;
+  updateTray();
+  const { version } = update.feed;
+  win?.webContents.send('update:status', { state: 'downloading', version });
+  try {
+    await prepareInstall(update.feed, { exe: app.getPath('exe'), name: app.getName() });
+    app.quit();
+  } catch (e) {
+    console.warn(`[update] install failed: ${e.message}`);
+    update.installing = false;
+    updateTray();
+    win?.webContents.send('update:status', { state: 'failed', version, error: e.message });
+    shell.openExternal(releasePage(version));
+  }
+}
+
+function updateMenu() {
+  if (!update.feed) return [];
+  const { version } = update.feed;
+  return [{ label: update.installing ? `Updating to ${version}…` : `Update to ${version}…`, enabled: !update.installing, click: installUpdate }];
 }
 
 // ---- IPC ------------------------------------------------------------------
@@ -817,6 +866,10 @@ app.whenReady().then(() => {
   createWindow();
   createTray();
   if (TIMER_DEMO) timer.start(settings.focusSeconds, settings.breakSeconds);
+  if (app.isPackaged && !SELFTEST) {
+    setTimeout(checkUpdates, 10_000);
+    setInterval(checkUpdates, UPDATE_EVERY);
+  }
 });
 
 app.on('window-all-closed', () => app.quit());
