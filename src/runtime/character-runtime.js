@@ -90,7 +90,7 @@ export class CharacterRuntime extends EventTarget {
     }
     this.active = req;
     this._emit('animation', { name: req.name, kind: req.kind });
-    const hurry = req.loop ? null : setTimeout(() => this.player.exit(), ONE_SHOT_MAX_MS);
+    const hurry = req.loop ? null : setTimeout(() => this.player.exit({ hurry: false }), ONE_SHOT_MAX_MS);
     let result = await this.player.play(req.name);
     clearTimeout(hurry);
     while (req.loop && result === 'done' && !this.queue.length) {
@@ -180,7 +180,7 @@ export class CharacterRuntime extends EventTarget {
     this.active = { name, kind: 'idle', loop: false };
     this._emit('animation', { name, kind: 'idle', level: level + 1 });
     // Hurry up long idle loops at levels 1-2; level 3 stays until cancelled.
-    if (level < 2) this.idleMaxTimer = setTimeout(() => this.player.exit(), this.c.idle.maxLoopMs ?? 12000);
+    if (level < 2) this.idleMaxTimer = setTimeout(() => this.player.exit({ hurry: false }), this.c.idle.maxLoopMs ?? 12000);
     await this.player.play(name);
     clearTimeout(this.idleMaxTimer);
     if (this.active?.kind === 'idle' && this.state === 'idle') await this.player.returnToNeutral();

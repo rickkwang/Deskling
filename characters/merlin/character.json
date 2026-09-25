@@ -124,12 +124,10 @@
     "Idle1_3",
     "Idle1_2",
     "Blink",
-    "Idle2_2",
     "Idle2_1"
    ],
    [
-    "Idle3_2",
-    "Idle3_1"
+    "Idle3_2"
    ]
   ]
  },

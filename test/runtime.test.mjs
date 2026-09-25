@@ -96,8 +96,8 @@ test('exiting plays on in sequence, ignoring random branches, and ends at the la
   // frame 1 has no exit branch; the last frame's exit branch points at itself.
   const frames = [
     { duration: 5, cells: [[0, 0]], branches: [{ to: 0, weight: 100 }] },
-    { duration: 5, cells: [[0, 0]], branches: [{ to: 0, weight: 100 }] },
-    { duration: 5, cells: [[0, 0]], branches: [{ to: 0, weight: 100 }], exitBranch: 2 },
+    { duration: 5, cells: [[1, 0]], branches: [{ to: 0, weight: 100 }] },
+    { duration: 5, cells: [[2, 0]], branches: [{ to: 0, weight: 100 }], exitBranch: 2 },
   ];
   const c = { spritesheet: { cellWidth: 1, cellHeight: 1 }, animations: { Loop: { frames } } };
   const player = new AnimationPlayer(el(), c, 'x.png');
@@ -111,4 +111,81 @@ test('exiting plays on in sequence, ignoring random branches, and ends at the la
   assert.equal(await result, 'done');
   assert.ok(Date.now() - t0 < 200, 'finished through the exit path, not the safety timeout');
   assert.deepEqual(seen.slice(-2), [1, 2]);
+});
+
+// A strip of distinct poses 0..n-1 that rewinds to pose 0 on the way out,
+// like Clippy's Thinking: frames n..2n-2 replay n-2..0.
+function rewinding(n, duration) {
+  const cell = (i) => [[i, 0]];
+  const frames = [];
+  for (let i = 0; i < n; i++) frames.push({ duration, cells: cell(i) });
+  for (let i = n - 2; i >= 0; i--) frames.push({ duration, cells: cell(i) });
+  return { spritesheet: { cellWidth: 1, cellHeight: 1 }, animations: { A: { frames } } };
+}
+
+test('exit takes a same-looking frame nearer the end instead of playing the long way', async () => {
+  const c = rewinding(30, 10); // from frame 1, the long way is ~56 frames
+  const player = new AnimationPlayer(el(), c, 'x.png');
+  const seen = [];
+  const show = player._show.bind(player);
+  player._show = (i) => { seen.push(i); show(i); };
+  const result = player.play('A');
+  while (!seen.includes(1)) await wait(1);
+  player.exit();
+  assert.equal(await result, 'done');
+  // Frame 1 shows pose 1; so does frame 57, one frame from the end.
+  assert.deepEqual(seen.slice(-1), [58]);
+  assert.ok(seen.length <= 4, `rewound through ${seen}`);
+});
+
+test('a long exit path plays faster to finish within the budget', async () => {
+  // No same-looking frames to skip to: 40 frames x 100 ms = 4 s of exit.
+  const frames = Array.from({ length: 41 }, (_, i) => ({ duration: 100, cells: [[i, 0]] }));
+  const c = { spritesheet: { cellWidth: 1, cellHeight: 1 }, animations: { A: { frames } } };
+  const player = new AnimationPlayer(el(), c, 'x.png');
+  const shown = [];
+  const show = player._show.bind(player);
+  player._show = (i) => { shown.push(i); show(i); };
+  const result = player.play('A');
+  while (!player.current) await wait(1);
+  player.exit();
+  const t0 = Date.now();
+  assert.equal(await result, 'done');
+  const took = Date.now() - t0;
+  assert.ok(took < 1400, `exit took ${took} ms`);
+  assert.equal(shown.length, 41, 'every frame still shown, just faster');
+});
+
+test('a frame held for seconds lets go when the animation exits', async () => {
+  const frames = [{ duration: 4000, cells: [[0, 0]] }, { duration: 10, cells: [[1, 0]] }];
+  const c = { spritesheet: { cellWidth: 1, cellHeight: 1 }, animations: { A: { frames } } };
+  const player = new AnimationPlayer(el(), c, 'x.png');
+  const result = player.play('A');
+  await wait(20);
+  player.exit();
+  const t0 = Date.now();
+  assert.equal(await result, 'done');
+  assert.ok(Date.now() - t0 < 400, 'did not sit out the 4 s hold');
+});
+
+test('a Return keeps its pace unless something is waiting on it', async () => {
+  // Ends posed on frame 4; its exit branches rewind 3, 2, 1, 0: 1.6 s.
+  const frames = [0, 1, 2, 3, 4].map((i) => ({ duration: 400, cells: [[i, 0]], exitBranch: i === 0 ? 5 : i - 1 }));
+  frames.push({ duration: 0, cells: [] });
+  const c = { spritesheet: { cellWidth: 1, cellHeight: 1 }, animations: { A: { useExitBranching: true, frames } } };
+  const player = new AnimationPlayer(el(), c, 'x.png');
+  const timeReturn = async (interrupt) => {
+    assert.equal(await player.play('A'), 'done');
+    assert.ok(player.pendingReturn, 'posed at the end');
+    const t0 = Date.now();
+    const done = player.returnToNeutral();
+    if (interrupt) { await wait(50); player.exit(); }
+    await done;
+    return Date.now() - t0;
+  };
+  const idle = await timeReturn(false);
+  assert.ok(idle >= 1500, `nothing waiting: authored pace (${idle} ms)`);
+  const hurried = await timeReturn(true);
+  // 50 ms in, 1.2 s of path is left: squeezed into the 1 s budget.
+  assert.ok(hurried < 1300, `interrupted: hurried (${hurried} ms)`);
 });

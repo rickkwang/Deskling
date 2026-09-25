@@ -11,7 +11,8 @@ npm run selftest               # end-to-end: idle → click → listening → th
 npm test                       # runtime semantics (exit branches, queue, idle levels)
 npm run validate               # validate every characters/*/character.json
 npm run preview -- --preview=clippy   # QA: play every animation with its state tags
-npx electron . --audit                # QA: every character — sprite cells non-empty, every animation ends visible
+npx electron . --audit                # QA: every character — sprite cells non-empty, every animation ends visible,
+                                      #     state/idle animations start and settle on the rest pose
 npx electron . --selftest --quiet --character=merlin   # end-to-end flow for one character (screenshots in qa/<id>/)
 npx electron . --selftest --quiet --balloon=win98      # same, with one balloon theme
 ```
