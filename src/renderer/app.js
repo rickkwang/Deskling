@@ -303,7 +303,9 @@ async function hidePet() {
 
 window.pet.onVisibility(async (v) => {
   if (v === 'hide') return hidePet();
+  entering = true;
   await runtime.show();
+  entering = false;
   announceUpdate();
 });
 window.pet.onSettings((next) => {
@@ -338,6 +340,7 @@ window.pet.onCharacter(async (next) => {
 // started from the menu.
 
 let pendingUpdate = null;
+let entering = false; // the pet's entrance is playing: wait for it
 
 function announce(text, { error = false } = {}) {
   if (busy) return false;
@@ -350,7 +353,7 @@ function announce(text, { error = false } = {}) {
 
 function announceUpdate() {
   const version = pendingUpdate;
-  if (!version || runtime.state === 'hidden' || (balloonOpen && content.text !== lastGreeting)) return;
+  if (!version || entering || runtime.state === 'hidden' || (balloonOpen && content.text !== lastGreeting)) return;
   if (!announce(`Deskling ${version} is out! Right-click me and choose “Update to ${version}…” whenever you like — I'll be back in a few seconds.`)) return;
   pendingUpdate = null;
   window.pet.updateSeen(version);
@@ -362,8 +365,10 @@ window.pet.onUpdateAvailable((version) => {
 });
 window.pet.onUpdateStatus(({ state, version, error }) => {
   if (state === 'available') {
-    pendingUpdate = null;
-    if (announce(`Deskling ${version} is out! Right-click me and choose “Update to ${version}…” — I'll be back in a few seconds.`)) window.pet.updateSeen(version);
+    if (announce(`Deskling ${version} is out! Right-click me and choose “Update to ${version}…” — I'll be back in a few seconds.`)) {
+      pendingUpdate = null;
+      window.pet.updateSeen(version);
+    } else pendingUpdate = version;
   } else if (state === 'current') announce(`You're on the latest version, Deskling ${version}.`);
   else if (state === 'check-failed') announce(`I couldn't check for updates: ${error}`, { error: true });
   else if (state === 'downloading') announce(`Downloading Deskling ${version}… I'll restart when it's ready.`);

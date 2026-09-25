@@ -378,6 +378,7 @@ function showPet() {
   if (!win.isVisible()) {
     win.showInactive();
     win.webContents.send('pet:visibility', 'show');
+    offerUpdate();
   }
   updateTray();
 }
@@ -639,10 +640,16 @@ async function checkUpdates() {
       update.feed = feed;
       updateTray();
     }
-    if (settings.updateSeen !== feed.version) win?.webContents.send('update:available', feed.version);
+    offerUpdate();
   } catch (e) {
     console.warn(`[update] ${e.message}`);
   }
+}
+
+// Only a visible pet can mention it; showPet offers it again.
+function offerUpdate() {
+  const version = update.feed?.version;
+  if (version && settings.updateSeen !== version && win?.isVisible()) win.webContents.send('update:available', version);
 }
 
 async function installUpdate() {
