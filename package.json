@@ -9,7 +9,7 @@
     "start": "electron .",
     "selftest": "electron . --selftest",
     "preview": "electron . --preview",
-    "test": "node --test test/",
+    "test": "node --test test/*.test.mjs",
     "validate": "node tools/validate-character.mjs",
     "import:clippyjs": "node tools/import-clippyjs.mjs",
     "dist": "electron-builder --mac dmg zip --arm64 --publish never"
