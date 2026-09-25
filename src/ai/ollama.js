@@ -36,6 +36,15 @@ export function pickModel(models, preferred) {
   return models.find((m) => m.name === preferred) || models[0] || null;
 }
 
+// Context window asked of Ollama. Left unset, it reserves the model's full
+// context: 262,144 tokens for nemotron-3-nano, 8.3 GB instead of 3.2 GB. A
+// conversation (system prompt, 12 messages of history, the reply) needs at
+// most about 8,500 tokens; past this, Ollama drops the oldest messages.
+const CONTEXT_TOKENS = 16384;
+// How long the model stays loaded after a reply (Ollama's own default): the
+// next reply is quick, and the memory is freed soon after the chat stops.
+const KEEP_ALIVE = '5m';
+
 // Streams a chat completion. Calls onToken(text) per chunk; resolves with the
 // full reply.
 export async function chat({ model, messages, maxTokens = 400, onToken, signal }) {
@@ -43,8 +52,8 @@ export async function chat({ model, messages, maxTokens = 400, onToken, signal }
     model: model.name,
     messages,
     stream: true,
-    keep_alive: '15m',
-    options: { temperature: 0.7, num_predict: maxTokens },
+    keep_alive: KEEP_ALIVE,
+    options: { temperature: 0.7, num_predict: maxTokens, num_ctx: CONTEXT_TOKENS },
   };
   if (model.thinking) body.think = false; // answer directly; a pet shouldn't ramble privately
   const res = await fetch(`${BASE}/api/chat`, {
