@@ -1,0 +1,74 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data:; style-src 'self'; script-src 'self'">
+  <title>Assistant</title>
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+  <header class="titlebar"><h1>Assistant</h1></header>
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="tab-character" aria-controls="panel-character" aria-selected="true">Character</button>
+    <button role="tab" id="tab-behavior" aria-controls="panel-behavior" aria-selected="false">Behavior</button>
+  </nav>
+
+  <main class="panel">
+    <section id="panel-character" role="tabpanel" aria-labelledby="tab-character">
+      <header class="card assistant-row">
+        <div class="avatar" id="avatar" aria-hidden="true"></div>
+        <div class="assistant-text">
+          <div class="title">Desktop Assistant</div>
+          <div class="sub">A character that chats and helps</div>
+        </div>
+        <label class="switch" title="Show the assistant on the desktop">
+          <input type="checkbox" id="enabled">
+          <span class="track"><span class="knob"></span></span>
+        </label>
+      </header>
+      <h2 class="heading">Choose a character</h2>
+      <div class="grid" id="grid" role="radiogroup" aria-label="Character"></div>
+      <div class="card size-row">
+        <label for="scale">Size</label>
+        <span class="size-end" aria-hidden="true">Small</span>
+        <input type="range" id="scale" min="0.5" max="2" step="0.25" list="scale-ticks">
+        <span class="size-end" aria-hidden="true">Large</span>
+        <output id="scale-value" for="scale">100%</output>
+        <datalist id="scale-ticks">
+          <option value="0.5"></option><option value="1"></option><option value="1.5"></option><option value="2"></option>
+        </datalist>
+      </div>
+      <p class="tip">Right-click or long-press the character for quick options.</p>
+    </section>
+
+    <section id="panel-behavior" role="tabpanel" aria-labelledby="tab-behavior" hidden>
+      <div class="card rows">
+        <div class="row">
+          <label class="label" for="greeting"><span>Greeting</span><small>Say hello when the assistant opens</small></label>
+          <label class="switch"><input type="checkbox" id="greeting"><span class="track"><span class="knob"></span></span></label>
+        </div>
+        <div class="row">
+          <label class="label" for="speech"><span>Speech</span><small>Speak replies aloud</small></label>
+          <label class="switch"><input type="checkbox" id="speech"><span class="track"><span class="knob"></span></span></label>
+        </div>
+        <div class="row">
+          <label class="label" for="style"><span>Response style</span><small>How the assistant should reply</small></label>
+          <select id="style" class="popup"></select>
+        </div>
+        <div class="row">
+          <label class="label" for="model"><span>Model</span><small id="model-note">Local Ollama model</small></label>
+          <select id="model" class="popup"></select>
+        </div>
+      </div>
+      <div class="instructions-head">
+        <label class="heading" for="instructions">Instructions</label>
+        <span id="count">0/500</span>
+      </div>
+      <textarea id="instructions" maxlength="500" rows="4" placeholder="e.g. Call me Captain, and explain things with sailing metaphors."></textarea>
+      <p class="help">Tell the assistant how to behave. Saved on this Mac and applied to every conversation.</p>
+    </section>
+  </main>
+
+  <script type="module" src="settings.js"></script>
+</body>
+</html>

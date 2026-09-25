@@ -1,0 +1,21 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'">
+  <title>Balloon</title>
+  <link rel="stylesheet" href="bubble.css">
+</head>
+<body class="below">
+  <section id="bubble">
+    <div id="msg" aria-live="polite"></div>
+    <form id="ask" autocomplete="off">
+      <input id="input" type="text" placeholder="Ask me anything…" spellcheck="false">
+      <button id="send" type="submit" aria-label="Send" disabled>
+        <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M8 13V3.5M3.8 7.6 8 3.4l4.2 4.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </form>
+  </section>
+  <script type="module" src="bubble.js"></script>
+</body>
+</html>

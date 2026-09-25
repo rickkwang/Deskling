@@ -1,0 +1,255 @@
+#!/usr/bin/env node
+// Converts clippy.js agent data (frames extracted from the original Microsoft
+// Agent .ACS files; agent.js, or agent.json as used by ryOS) into this app's
+// data-driven Character package:
+//   characters/<id>/character.json + spritesheet.png
+//
+// Usage: node tools/import-clippyjs.mjs <clippy.js/agents dir> [Name ...]
+
+import fs from 'node:fs';
+import path from 'node:path';
+import vm from 'node:vm';
+import { fileURLToPath } from 'node:url';
+import { readPngSize } from '../src/character/png.js';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const [, , agentsDir, ...names] = process.argv;
+if (!agentsDir) {
+  console.error('usage: import-clippyjs.mjs <clippy.js/agents> [Name ...]');
+  process.exit(1);
+}
+
+// Animation set each character follows, per Microsoft's docs:
+//  - "agent":  Microsoft Agent Standard Animation Set (agent-states.md)
+//  - "office": Office 2000 Animation Set (the-office-animation-set.md)
+//  - "xp":     Windows XP Search Companion (no public animation spec)
+const CHARACTERS = {
+  Clippy: { set: 'office', description: 'The Office 2000 paper clip assistant (Clippit).' },
+  Links: { set: 'office', description: 'The Office cat assistant.' },
+  Rover: { set: 'xp', description: 'The Windows XP search companion dog.' },
+  Merlin: { set: 'agent', description: 'Microsoft Agent wizard character.' },
+  Genie: { set: 'agent', description: 'Microsoft Agent genie character.' },
+  Peedy: { set: 'agent', description: 'Microsoft Agent parrot character.' },
+  Genius: { set: 'office', description: 'The Office Einstein-like assistant.' },
+  Rocky: { set: 'office', description: 'The Office dog assistant.' },
+  F1: { set: 'office', description: 'The Office robot assistant.' },
+  OfficeLogo: {
+    set: 'office',
+    displayName: 'Office Logo',
+    description: 'The Office puzzle-piece logo assistant.',
+    frames: 'ryOS (github.com/ryokun6/ryos, public/assets/assistant/officelogo) — clippy.js-format frame tables from the original Office Assistant character',
+  },
+};
+
+// App state -> ordered candidate animations. `official` lists the names that
+// Microsoft documents for this exact purpose; anything else picked from the
+// candidates is an app-level mapping (closest official motion).
+const STATE_RULES = {
+  idle: { official: ['RestPose'], candidates: ['RestPose'], ref: 'Office: RestPose "used when the character isn\'t playing an animation"' },
+  listening: { official: ['Alert', 'StartListening'], candidates: ['Alert', 'StartListening', 'ClickedOn', 'RestPose'], ref: 'Agent: Listening state -> Alert' },
+  thinking: { official: ['Thinking', 'Think'], candidates: ['Thinking', 'Think', 'Processing', 'Searching'], mode: 'loop', ref: 'Office: Thinking "complex calculation" (entry, loop, exit)' },
+  speaking: { official: ['Explain'], candidates: ['Explain', 'RestPose'], ref: 'Agent: Speaking state -> RestPose; Office: Explain "explain something to the user"' },
+  confused: { official: ['Confused'], candidates: ['Confused', 'IdleHeadScratch', 'IdleScratch', 'IdleHeadPatting', 'Embarrassed', 'Thinking'], ref: 'Agent: Confused "character scratches head"' },
+  acknowledge: { official: ['Acknowledge'], candidates: ['Acknowledge', 'Congratulate', 'Pleased'], ref: 'Agent: Acknowledge "nods"; Congratulate is documented as "a stronger form of Acknowledge"' },
+  getAttention: { official: ['GetAttention'], candidates: ['GetAttention', 'Alert', 'Wave'], ref: 'Agent/Office: GetAttention' },
+  explain: { official: ['Explain'], candidates: ['Explain', 'Announce', 'GestureLeft'], ref: 'Agent/Office: Explain' },
+  show: { official: ['Show'], candidates: ['Show'], ref: 'Agent: Showing state -> Show' },
+  hide: { official: ['Hide'], candidates: ['Hide', 'HideQuick'], ref: 'Agent: Hiding state -> Hide' },
+  greeting: { official: ['Greeting', 'Greet'], candidates: ['Greeting', 'Greet', 'Show'], ref: 'Office: Greeting "character is chosen"; Agent: Greet' },
+  goodbye: { official: ['GoodBye', 'Goodbye', 'Wave'], candidates: ['GoodBye', 'Goodbye', 'Wave', 'Hide'], ref: 'Office: Goodbye "another character is chosen"; Agent: Wave' },
+};
+
+// Agent idling levels (agent-states.md "The Idling States").
+const IDLE_LEVELS = [
+  { re: /^(Idle1_|IdleBlink|Blink$|IdleEyeBrow|IdleFingerTap|IdleHeadScratch|IdleSideToSide|IdleLook|IdleTwitch|IdleTailWag|Idle\(?\d\)?$|Idle0$|Idle$)/ },
+  { re: /^(Idle2_|IdleAtom|IdleRopePile|IdleYawn|IdleStretch|IdleCleaning|IdleLegLick|IdleButterFly|IdleCuteToeTwist|IdleLeansAgainstWall|IdleLowersBrows|IdleHeadPatting|IdleScratch)/ },
+  { re: /^(Idle3_|IdleSnooze|IdleFallsAsleep|IdleLowersToGround|DeepIdle)/ },
+];
+
+// Greetings, one picked at random each time the balloon greets the user.
+const GREETINGS = {
+  Clippy: [
+    "It looks like you're about to do something great. Want some help with that? 📎",
+    "Hi! I'm Clippy. I've been holding things together since 1997.",
+    "It looks like you're staring at the screen. Need a hand?",
+    "Letters, lists, life questions — I'll bend over backwards to help.",
+    "Psst. I can do a lot more than paper now. Ask me anything!",
+  ],
+  Links: [
+    "Mrrow! Links here. I'll help — right after this stretch.",
+    "Purr… you caught me napping on your desktop. What do you need?",
+    "Links at your service. I promise not to sit on your keyboard.",
+    "Curiosity is my specialty. Got a question for this cat?",
+    "*tail flick* Ready when you are.",
+  ],
+  Rover: [
+    "Woof! Rover here. Want me to fetch something?",
+    "Hi! I'm Rover. Tell me what you're looking for and I'll sniff it out.",
+    "*wags tail* Ready to search, fetch, or just keep you company!",
+    "Good to see you! Throw me a question — I'll bring back an answer.",
+    "Rover reporting for duty. No bone required.",
+  ],
+  Merlin: [
+    "Greetings, traveler! Merlin at thy service.",
+    "Ah, you summoned me! What riddle shall we unravel today?",
+    "Hark! A wizard appears. Ask, and I shall conjure an answer.",
+    "Merlin here. My spellbook is open — what do you seek?",
+    "Well met! Even wizards need a desktop to live on.",
+  ],
+  Genie: [
+    "Poof! Your Genie has arrived. What is your wish?",
+    "Out of the lamp and at your service! Ask away.",
+    "Three wishes? Let's make it unlimited questions.",
+    "Salaam, friend! Your wish is my command — within reason.",
+    "Genie here! No lamp rubbing required.",
+  ],
+  Peedy: [
+    "Squawk! Peedy here. What's the word?",
+    "Hello, hello! Peedy's perched and ready to help.",
+    "Polly want a question! …I mean, what can I do for you?",
+    "Peedy at your service. I talk a lot, but I listen too!",
+    "Rawk! Ready to chat — feathers fluffed and everything.",
+  ],
+  Genius: [
+    "Ah, hello! Genius here. Shall we think about something together?",
+    "Make it as simple as possible, but no simpler. What's puzzling you?",
+    "Welcome! Imagination beats knowledge — luckily I have both.",
+    "Genius at your service. Relatively speaking, I'm quick.",
+    "A question? Excellent. Questions are my favorite equations.",
+  ],
+  Rocky: [
+    "Arf! Rocky here, ready to help!",
+    "Hey there! Rocky's on the job. What do you need?",
+    "*sits politely* Good human! Got a question for me?",
+    "Rocky reporting in. Ears up, tail wagging.",
+    "Woof woof! Let's get something done together.",
+  ],
+  F1: [
+    "BEEP BOOP. F1 online. How may I assist?",
+    "System check complete. All circuits ready for your questions!",
+    "Greetings, human. F1 is fully charged and at your service.",
+    "Hello! I'm F1. Please input your question. *whirr*",
+    "Booting helpfulness module… done! What do you need?",
+  ],
+  OfficeLogo: [
+    "Hi! I'm Office Logo — all the pieces are in place. What can I do?",
+    "Let's put the pieces together. What are you working on?",
+    "Office Logo here, fitting right in on your desktop!",
+    "Puzzled? Good thing I'm literally made of puzzle pieces.",
+    "Hello! Four colors, one mission: helping you out.",
+  ],
+};
+
+const SYSTEM_PROMPTS = {
+  Clippy: "You are Clippy (Clippit), the cheerful paper-clip Office Assistant. You are helpful, upbeat and a little eager. Keep answers short.",
+};
+
+function loadAgent(dir, name) {
+  const json = path.join(dir, name, 'agent.json');
+  if (fs.existsSync(json)) return JSON.parse(fs.readFileSync(json, 'utf8'));
+  let data;
+  const sandbox = { clippy: { ready: (_n, d) => { data = d; } } };
+  vm.runInNewContext(fs.readFileSync(path.join(dir, name, 'agent.js'), 'utf8'), sandbox);
+  return data;
+}
+
+function convert(name, meta) {
+  const src = loadAgent(agentsDir, name);
+  const [cw, ch] = src.framesize;
+  const sheetSrc = path.join(agentsDir, name, 'map.png');
+  const { width, height } = readPngSize(fs.readFileSync(sheetSrc));
+
+  const animations = {};
+  for (const [animName, anim] of Object.entries(src.animations)) {
+    // Agent "Return animation": either "Use Exit Branching" or an explicit
+    // <Name>Return animation (GetAttentionReturn, ReadReturn, LookUpReturn...).
+    const explicitReturn = src.animations[`${animName}Return`] ? `${animName}Return` : undefined;
+    animations[animName] = {
+      ...(anim.useExitBranching ? { useExitBranching: true } : {}),
+      ...(explicitReturn ? { returnAnimation: explicitReturn } : {}),
+      frames: anim.frames.map((f) => {
+        const frame = { duration: f.duration };
+        // Empty frames (no images) are legitimate: Show/Hide start/end blank.
+        frame.cells = (f.images || []).map(([x, y]) => [x / cw, y / ch]);
+        if (f.branching) frame.branches = f.branching.branches.map((b) => ({ to: b.frameIndex, weight: b.weight }));
+        if (f.exitBranch !== undefined) frame.exitBranch = f.exitBranch;
+        return frame;
+      }),
+    };
+  }
+
+  const names = Object.keys(animations);
+  const states = {};
+  for (const [state, rule] of Object.entries(STATE_RULES)) {
+    const pick = rule.candidates.find((c) => names.includes(c));
+    if (!pick) continue;
+    const official = meta.set !== 'xp' && rule.official.includes(pick);
+    states[state] = {
+      animations: [pick],
+      ...(rule.mode ? { mode: rule.mode } : {}),
+      source: official ? 'official' : 'app-mapped',
+      ref: rule.ref,
+    };
+  }
+
+  const idleNames = names.filter((n) => /^(Idle|Blink$|DeepIdle)/.test(n));
+  const levels = IDLE_LEVELS.map(({ re }) => idleNames.filter((n) => re.test(n)));
+  const unassigned = idleNames.filter((n) => !levels.flat().includes(n));
+  levels[0].push(...unassigned);
+  if (!levels[1].length) levels[1] = [...levels[0]];
+  if (!levels[2].length) levels[2] = [...levels[1]];
+  // Agent: level 2 also draws from level 1 ("Blink, Idle1_x, Idle2_x").
+  levels[1] = [...new Set([...levels[0], ...levels[1]])];
+
+  const id = name.toLowerCase();
+  const displayName = meta.displayName || name;
+  const persona = {
+    greetings: GREETINGS[name] || [`Hi, I'm ${displayName}! Need a hand with anything?`],
+    systemPrompt: SYSTEM_PROMPTS[name] || `You are ${displayName}, a classic Microsoft desktop assistant character. You are friendly and helpful. Keep answers short.`,
+  };
+
+  const character = {
+    schemaVersion: 1,
+    id,
+    displayName,
+    description: meta.description,
+    order: Object.keys(CHARACTERS).indexOf(name),
+    animationSet: meta.set,
+    spritesheet: {
+      path: 'spritesheet.png',
+      cellWidth: cw,
+      cellHeight: ch,
+      columns: Math.floor(width / cw),
+      rows: Math.floor(height / ch),
+    },
+    anchor: 'bottom-center',
+    states,
+    idle: {
+      source: meta.set === 'agent' ? 'official' : 'app-mapped',
+      firstDelayMs: 6000,
+      intervalMs: 9000,
+      maxLoopMs: 12000,
+      levelAfterMs: [0, 60000, 240000],
+      levels,
+    },
+    persona,
+    provenance: {
+      frames: meta.frames || 'clippy.js (MIT) — frame tables extracted from the original Microsoft Agent .ACS character',
+      art: 'Microsoft Corporation. Character art is Microsoft property; bundled for local, non-commercial use.',
+    },
+    animations,
+  };
+
+  const out = path.join(ROOT, 'characters', id);
+  fs.mkdirSync(out, { recursive: true });
+  fs.copyFileSync(sheetSrc, path.join(out, 'spritesheet.png'));
+  fs.writeFileSync(path.join(out, 'character.json'), JSON.stringify(character, null, 1) + '\n');
+  const mapped = Object.entries(states).map(([s, v]) => `${s}=${v.animations[0]}${v.source === 'app-mapped' ? '*' : ''}`);
+  console.log(`${id}: ${names.length} animations; ${mapped.join(' ')}`);
+}
+
+for (const name of names.length ? names : Object.keys(CHARACTERS)) {
+  if (!CHARACTERS[name]) throw new Error(`unknown character ${name}`);
+  convert(name, CHARACTERS[name]);
+}
+console.log('(* = app-level mapping, no official animation for that state)');

@@ -1,0 +1,18 @@
+{
+  "name": "ai-desk-pet",
+  "version": "0.1.0",
+  "description": "Lightweight AI desktop pet. Microsoft Agent characters, local Ollama brain.",
+  "type": "module",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "selftest": "electron . --selftest",
+    "preview": "electron . --preview",
+    "test": "node --test test/",
+    "validate": "node tools/validate-character.mjs",
+    "import:clippyjs": "node tools/import-clippyjs.mjs"
+  },
+  "devDependencies": {
+    "electron": "^44.4.5"
+  }
+}
