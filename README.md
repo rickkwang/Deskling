@@ -1,6 +1,6 @@
-# It Looks Like
+# Deskling
 
-*"It looks like you could use a hand!"*
+*A little creature that lives on your desktop.*
 
 A lightweight desktop pet that is also an AI assistant. It uses Microsoft Agent characters (Clippy by default) and a model already installed in your local Ollama.
 
@@ -21,7 +21,7 @@ npx electron . --selftest --quiet --character=merlin   # end-to-end flow for one
 - **Assistant Settings** has two tabs:
   - **Character**: the Desktop Assistant on/off switch and the character grid.
   - **Behavior**: Greeting, Speech, Response Style (Concise, Normal, Chatty, Detailed, Friendly, Professional, Playful), local Model, and free-form Instructions (up to 500 characters).
-- Settings are saved to `~/Library/Application Support/It Looks Like/settings.json`.
+- Settings are saved to `~/Library/Application Support/Deskling/settings.json`.
 - `electron . --settings-preview=character|behavior` captures the settings window to `qa/` for QA.
 
 ## Layout
@@ -37,7 +37,7 @@ tools/           clippy.js → Character importer, validator
 ```
 
 To add a custom character, put `character.json` + a spritesheet in
-`~/Library/Application Support/It Looks Like/characters/<id>/` and run `npm run validate -- <dir>`.
+`~/Library/Application Support/Deskling/characters/<id>/` and run `npm run validate -- <dir>`.
 The character must map the states `idle listening thinking speaking confused acknowledge getAttention explain show hide`
 (each tagged `official` or `app-mapped`) and have a `persona` with a `systemPrompt` and a list of `greetings`
 (one is picked at random whenever the character says hello).

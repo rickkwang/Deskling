@@ -34,11 +34,13 @@ let settings = {
   // Behavior (Assistant Settings)
   enabled: true, greeting: true, speech: false, responseStyle: 'normal', instructions: '',
 };
-// The app used to be called ai-desk-pet: carry its data over once.
+// Earlier names of the app, newest first: carry their data over once.
+const OLD_NAMES = ['It Looks Like', 'ai-desk-pet'];
 function migrateUserData() {
-  const old = path.join(app.getPath('appData'), 'ai-desk-pet');
   const dir = app.getPath('userData');
-  if (!fs.existsSync(old) || fs.existsSync(path.join(dir, 'settings.json'))) return;
+  if (fs.existsSync(path.join(dir, 'settings.json'))) return;
+  const old = OLD_NAMES.map((n) => path.join(app.getPath('appData'), n)).find((d) => fs.existsSync(path.join(d, 'settings.json')));
+  if (!old) return;
   fs.mkdirSync(dir, { recursive: true });
   for (const name of ['settings.json', 'characters']) {
     const from = path.join(old, name);
@@ -474,7 +476,7 @@ function updateTray() {
 function createTray() {
   tray = new Tray(nativeImage.createEmpty());
   tray.setTitle('📎');
-  tray.setToolTip('It Looks Like');
+  tray.setToolTip('Deskling');
   updateTray();
 }
 
