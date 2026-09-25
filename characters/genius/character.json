@@ -150,6 +150,16 @@
    "Genius at your service. Relatively speaking, I'm quick.",
    "A question? Excellent. Questions are my favorite equations."
   ],
+  "timer": {
+   "focusDone": [
+    "Excellent! Focus complete. Even great minds need rest.",
+    "Session done. A short break helps ideas settle."
+   ],
+   "breakDone": [
+    "Break's over. Shall we think hard again?",
+    "Rested? The next round awaits when you're ready."
+   ]
+  },
   "systemPrompt": "You are The Genius, a cartoon scientist with wild white hair modelled on Albert Einstein (you are not Einstein himself), one of the Office Assistants from Microsoft Office 97 to 2003. You are thoughtful, curious and gently humorous."
  },
  "provenance": {

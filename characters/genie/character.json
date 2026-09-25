@@ -144,6 +144,16 @@
    "Salaam, friend! No wishes, I'm afraid, but plenty of answers.",
    "Genie here! No lamp rubbing required."
   ],
+  "timer": {
+   "focusDone": [
+    "Poof! Focus session complete. Take a break — you earned it!",
+    "Ta-da! Focus done. Stretch like you just got out of a lamp."
+   ],
+   "breakDone": [
+    "Break's over! Ready for another round?",
+    "Back from the break? Let's make the next round great."
+   ]
+  },
   "systemPrompt": "You are Genie, a cartoon genie, one of the Microsoft Agent characters from the late 1990s. You are cheerful and theatrical, but you cannot grant wishes or do magic."
  },
  "provenance": {

@@ -2,7 +2,7 @@
 // the main process, which persists it and broadcasts it to the pet.
 
 const $ = (sel) => document.querySelector(sel);
-const { settings: initial, characters, ai, styles, balloons } = await window.pet.getSettings();
+const { settings: initial, characters, ai, styles, balloons, timer } = await window.pet.getSettings();
 let settings = initial;
 
 // ---- tabs ------------------------------------------------------------------
@@ -170,6 +170,39 @@ if (ai.models.length) {
   $('#model-note').textContent = ai.available ? 'Pull one with ollama pull' : 'Start it with ollama serve';
 }
 
+// Hours, minutes and seconds. The total is what counts: 90 min reads back as
+// 1 h 30 min, and out-of-range totals snap to the nearest limit.
+const DURATIONS = [['focus', 'focusSeconds'], ['break', 'breakSeconds']];
+const durationFields = (kind) => [...document.querySelectorAll(`#${kind}-duration input`)];
+function showDuration(kind, seconds) {
+  const [h, m, s] = durationFields(kind);
+  h.value = Math.floor(seconds / 3600);
+  m.value = Math.floor(seconds / 60) % 60;
+  s.value = seconds % 60;
+}
+for (const [kind, key] of DURATIONS) {
+  const [min, max] = timer.limits[kind];
+  durationFields(kind)[0].max = Math.floor(max / 3600);
+  for (const input of durationFields(kind)) {
+    input.addEventListener('change', () => {
+      const total = durationFields(kind).reduce((sum, f) => sum + Math.max(0, Math.round(Number(f.value) || 0)) * f.dataset.unit, 0);
+      const seconds = Math.min(max, Math.max(min, total));
+      showDuration(kind, seconds);
+      window.pet.setSettings({ [key]: seconds });
+    });
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
+  }
+}
+const soundSelect = $('#timer-sound');
+for (const [id, { label }] of Object.entries(timer.sounds)) soundSelect.add(new Option(label, id));
+// Picking a sound plays it, like the Sound pane in System Preferences.
+soundSelect.addEventListener('change', () => {
+  const id = soundSelect.value;
+  const { file } = timer.sounds[id];
+  if (file) new Audio(`sounds/${file}`).play().catch(() => {});
+  window.pet.setSettings({ timerSound: id });
+});
+
 const bind = (id, key, prop = 'checked') => $(id).addEventListener('change', (e) => window.pet.setSettings({ [key]: e.target[prop] }));
 bind('#enabled', 'enabled');
 bind('#greeting', 'greeting');
@@ -226,6 +259,10 @@ function render() {
   $('#greeting').checked = settings.greeting;
   $('#speech').checked = settings.speech;
   styleSelect.value = settings.responseStyle;
+  for (const [kind, key] of DURATIONS) {
+    if (!durationFields(kind).includes(document.activeElement)) showDuration(kind, settings[key]);
+  }
+  soundSelect.value = settings.timerSound;
   if (ai.models.length) modelSelect.value = ai.models.includes(settings.model) ? settings.model : ai.model;
   if (document.activeElement !== instructions) {
     instructions.value = settings.instructions || '';

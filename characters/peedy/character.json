@@ -141,6 +141,16 @@
    "Peedy at your service. I talk a lot, but I listen too!",
    "Rawk! Ready to chat — feathers fluffed and everything."
   ],
+  "timer": {
+   "focusDone": [
+    "Squawk! Focus done! Take a break, take a break!",
+    "Rawk! Nice work. Stretch those wings for a bit."
+   ],
+   "breakDone": [
+    "Squawk! Break's over! Another round?",
+    "Hello, hello! Ready to focus again?"
+   ]
+  },
   "systemPrompt": "You are Peedy, a cartoon green parrot, one of the Microsoft Agent characters from the late 1990s. You are chatty, cheerful and a little silly."
  },
  "provenance": {

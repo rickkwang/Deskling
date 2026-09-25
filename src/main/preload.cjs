@@ -17,6 +17,14 @@ contextBridge.exposeInMainWorld('pet', {
   onCharacter: on('pet:character'),
   onVisibility: on('pet:visibility'),
   onChatReset: on('chat:reset'),
+  timer: {
+    status: () => ipcRenderer.invoke('timer:status'),
+    action: (action) => ipcRenderer.send('timer:action', action),
+    remark: (info) => ipcRenderer.invoke('timer:remark', info),
+    onStatus: on('timer:status'),
+    onEnd: on('timer:end'),
+    onSound: on('timer:sound'),
+  },
   // Pet window -> balloon window (via main).
   bubble: (content) => ipcRenderer.send('bubble:content', content),
   bubbleShow: (opts) => ipcRenderer.send('bubble:show', opts),

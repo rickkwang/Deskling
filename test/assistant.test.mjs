@@ -46,3 +46,26 @@ test('the prompt says the assistant can only talk, not act', () => {
   assert.match(p, /cannot receive files or drag-and-drop/);
   assert.match(p, /Never offer or describe any other ability/);
 });
+
+test('with nothing typed yet, the system language is named', () => {
+  assert.match(languageRule('', 'zh-CN'), /Reply in Chinese/);
+  assert.match(languageRule('', 'en-US'), /Reply in English/);
+  assert.match(languageRule('Hello', 'zh-CN'), /language of the user's latest message/, 'typed text wins');
+});
+
+test('a timer remark stays in history but leaves a chat in progress alone', async () => {
+  const a = new Assistant();
+  a.setPersona({ systemPrompt: '' });
+  a.model = { name: 'stub' };
+  let sent = null;
+  a.provider = { chat: async ({ messages }) => { sent = messages; return ' Take a break! '; } };
+  const abort = new AbortController();
+  a.abort = abort;
+  assert.equal(await a.remark('The focus session ended.', { locale: 'zh-CN' }), 'Take a break!');
+  assert.equal(abort.signal.aborted, false);
+  assert.match(sent[0].content, /Reply in Chinese/);
+  assert.match(sent.at(-1).content, /^\[App event, not typed by the user\] The focus session ended\./);
+  await a.send('谢谢');
+  assert.ok(sent.every((m) => Object.keys(m).join() === 'role,content'), 'no app-only fields reach the model');
+  assert.equal(a.history.length, 4);
+});

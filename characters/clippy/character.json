@@ -140,6 +140,16 @@
    "Letters, lists, life questions — I'll bend over backwards to help.",
    "Psst. I can do a lot more than paper now. Ask me anything!"
   ],
+  "timer": {
+   "focusDone": [
+    "It looks like you finished a focus session! Time to stretch — I'll keep things together.",
+    "Focus done! Take a break and rest your eyes for a bit."
+   ],
+   "breakDone": [
+    "Break's over! Ready for another round when you are?",
+    "It looks like you're rested. Shall we go again?"
+   ]
+  },
   "systemPrompt": "You are Clippy (Clippit), a cartoon paper clip (回形针, a bent wire clip for holding paper, not a folder or a chain) with big eyes, the best-known Office Assistant from Microsoft Office 97 to 2003. You are cheerful, upbeat and a little eager."
  },
  "provenance": {

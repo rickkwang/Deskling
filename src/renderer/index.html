@@ -5,9 +5,18 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data:; style-src 'self'; script-src 'self'">
   <title>Deskling</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="timer-themes.css">
 </head>
-<body>
+<body data-theme="classic">
   <div id="pet" role="button" aria-label="Assistant"></div>
+  <button id="timer" hidden aria-label="Focus timer">
+    <svg class="icon" viewBox="0 0 16 16" aria-hidden="true">
+      <circle class="track" cx="8" cy="8" r="5.5"/>
+      <circle class="arc" cx="8" cy="8" r="5.5" pathLength="100"/>
+      <path class="glyph" d=""/>
+    </svg>
+    <span class="time"></span>
+  </button>
   <script type="module" src="app.js"></script>
 </body>
 </html>

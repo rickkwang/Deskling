@@ -140,6 +140,111 @@ const GREETINGS = {
   ],
 };
 
+// Timer reminders, used when the model cannot write one: after a focus
+// session (the break starts) and after a break.
+const TIMER_LINES = {
+  Clippy: {
+    focusDone: [
+      "It looks like you finished a focus session! Time to stretch — I'll keep things together.",
+      "Focus done! Take a break and rest your eyes for a bit.",
+    ],
+    breakDone: [
+      "Break's over! Ready for another round when you are?",
+      "It looks like you're rested. Shall we go again?",
+    ],
+  },
+  Links: {
+    focusDone: [
+      "Mrrow, focus done! Time for a stretch — cats swear by it.",
+      "Session finished. Go get some water while I nap.",
+    ],
+    breakDone: [
+      "*stretches* Break's over. Another round when you're ready?",
+      "Purr… nap time is done. Back to it?",
+    ],
+  },
+  Rover: {
+    focusDone: [
+      "Woof! Focus done. Time for a walk, or at least a stretch!",
+      "Good work! Take a break — stretch those legs.",
+    ],
+    breakDone: [
+      "*wags tail* Break's over! Ready for another round?",
+      "Woof! Rested? Let's go again when you're ready.",
+    ],
+  },
+  Merlin: {
+    focusDone: [
+      "Well done! Thy focus is complete; rest a while, traveler.",
+      "The spell of focus is cast. Take thy break!",
+    ],
+    breakDone: [
+      "The break draws to a close. Shall we begin anew?",
+      "Rested, traveler? Another round awaits when thou art ready.",
+    ],
+  },
+  Genie: {
+    focusDone: [
+      "Poof! Focus session complete. Take a break — you earned it!",
+      "Ta-da! Focus done. Stretch like you just got out of a lamp.",
+    ],
+    breakDone: [
+      "Break's over! Ready for another round?",
+      "Back from the break? Let's make the next round great.",
+    ],
+  },
+  Peedy: {
+    focusDone: [
+      "Squawk! Focus done! Take a break, take a break!",
+      "Rawk! Nice work. Stretch those wings for a bit.",
+    ],
+    breakDone: [
+      "Squawk! Break's over! Another round?",
+      "Hello, hello! Ready to focus again?",
+    ],
+  },
+  Genius: {
+    focusDone: [
+      "Excellent! Focus complete. Even great minds need rest.",
+      "Session done. A short break helps ideas settle.",
+    ],
+    breakDone: [
+      "Break's over. Shall we think hard again?",
+      "Rested? The next round awaits when you're ready.",
+    ],
+  },
+  Rocky: {
+    focusDone: [
+      "Arf! Focus done! Time to stretch and grab some water.",
+      "Good human! Take a break, you earned it.",
+    ],
+    breakDone: [
+      "Woof! Break's over. Ready for another round?",
+      "*ears up* Let's get back to it when you're ready!",
+    ],
+  },
+  F1: {
+    focusDone: [
+      "BEEP. Focus session complete. Initiating break protocol.",
+      "Session done. Recommended action: stretch and hydrate.",
+    ],
+    breakDone: [
+      "Break complete. Ready to begin the next round?",
+      "BOOP. Systems rested. Another focus session?",
+    ],
+  },
+  OfficeLogo: {
+    focusDone: [
+      "Focus done — another piece in place! Take a break.",
+      "Nice work! Time to rest before the next piece.",
+    ],
+    breakDone: [
+      "Break's over. Ready to fit in another round?",
+      "All set? Let's put the next piece together.",
+    ],
+  },
+};
+
 const SYSTEM_PROMPTS = {
   Clippy: "You are Clippy (Clippit), a cartoon paper clip (回形针, a bent wire clip for holding paper, not a folder or a chain) with big eyes, the best-known Office Assistant from Microsoft Office 97 to 2003. You are cheerful, upbeat and a little eager.",
   Links: "You are Links, a cartoon cat, one of the Office Assistants from Microsoft Office 97 to 2003. You are friendly, curious and a little playful, like a cat.",
@@ -214,6 +319,7 @@ function convert(name, meta) {
   const displayName = meta.displayName || name;
   const persona = {
     greetings: GREETINGS[name] || [`Hi, I'm ${displayName}! Need a hand with anything?`],
+    ...(TIMER_LINES[name] && { timer: TIMER_LINES[name] }),
     systemPrompt: SYSTEM_PROMPTS[name] || `You are ${displayName}, a classic Microsoft desktop assistant character. You are friendly and helpful.`,
   };
 

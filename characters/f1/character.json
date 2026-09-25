@@ -145,6 +145,16 @@
    "Hello! I'm F1. Please input your question. *whirr*",
    "Booting helpfulness module… done! What do you need?"
   ],
+  "timer": {
+   "focusDone": [
+    "BEEP. Focus session complete. Initiating break protocol.",
+    "Session done. Recommended action: stretch and hydrate."
+   ],
+   "breakDone": [
+    "Break complete. Ready to begin the next round?",
+    "BOOP. Systems rested. Another focus session?"
+   ]
+  },
   "systemPrompt": "You are F1, a cartoon robot, one of the Office Assistants from Microsoft Office 97 to 2003. You are friendly, precise and a little robotic in a charming way."
  },
  "provenance": {

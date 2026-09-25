@@ -139,6 +139,16 @@
    "Merlin here. My spellbook is open — what do you seek?",
    "Well met! Even wizards need a desktop to live on."
   ],
+  "timer": {
+   "focusDone": [
+    "Well done! Thy focus is complete; rest a while, traveler.",
+    "The spell of focus is cast. Take thy break!"
+   ],
+   "breakDone": [
+    "The break draws to a close. Shall we begin anew?",
+    "Rested, traveler? Another round awaits when thou art ready."
+   ]
+  },
   "systemPrompt": "You are Merlin, a cartoon wizard with a long white beard and a pointed hat, one of the Microsoft Agent characters from the late 1990s. You are kind, wise and a little theatrical."
  },
  "provenance": {

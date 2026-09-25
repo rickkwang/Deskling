@@ -1,9 +1,10 @@
-import { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage, screen } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, Notification, Tray, nativeImage, screen } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Assistant, RESPONSE_STYLES } from '../ai/assistant.js';
 import { DragFollower } from './drag-follow.js';
+import { FocusTimer, LIMITS, validSeconds, PRESETS, SOUNDS, duration, minutesLeft } from './focus-timer.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const SELFTEST = process.argv.includes('--selftest');
@@ -12,6 +13,9 @@ const arg = (name) => process.argv.find((a) => a.startsWith(`--${name}=`))?.spli
 const PREVIEW = process.argv.some((a) => a === '--preview' || a.startsWith('--preview='));
 // QA: electron . --settings-preview=character|behavior  (captures qa/settings-<tab>.png)
 const SETTINGS_PREVIEW = arg('settings-preview');
+// QA: electron . --selftest --edge --hold=60000 --timer-demo=60  (starts the
+// focus timer at once, running 60 times fast)
+const TIMER_DEMO = Number(arg('timer-demo')) || 0;
 // QA: electron . --audit  (sprite/animation visibility audit for every character)
 const AUDIT = process.argv.includes('--audit');
 const WIN_W = 340;
@@ -34,6 +38,7 @@ let settings = {
   balloon: 'classic', // speech balloon theme (BALLOON_THEMES)
   // Behavior (Assistant Settings)
   enabled: true, greeting: true, speech: false, responseStyle: 'normal', instructions: '',
+  focusSeconds: 25 * 60, breakSeconds: 5 * 60, timerSound: 'indigo', // Focus Timer
 };
 // Speech balloon looks: src/renderer/balloon-themes/<id>.css. `tail` is how
 // far the tail tip reaches beyond the box (it sets where the window goes);
@@ -72,6 +77,9 @@ function loadSettings() {
   delete settings.x;
   delete settings.y;
   if (!(settings.balloon in BALLOON_THEMES)) settings.balloon = 'classic';
+  if (!validSeconds('focus', settings.focusSeconds)) settings.focusSeconds = 25 * 60;
+  if (!validSeconds('break', settings.breakSeconds)) settings.breakSeconds = 5 * 60;
+  if (!(settings.timerSound in SOUNDS)) settings.timerSound = 'indigo';
 }
 function saveSettings() {
   if (SELFTEST || SETTINGS_PREVIEW) return;
@@ -158,9 +166,12 @@ function petPoint() {
 
 // Where the feet sit inside the window (set by the renderer's layout).
 let anchor = { x: WIN_W - 16 - 58, y: 360 };
+// Room above the pet's head taken by the focus timer pill (0 when hidden).
+let headroom = 0;
 
-function layoutWindow({ width, height, anchorX, anchorY, petW, petH }) {
+function layoutWindow({ width, height, anchorX, anchorY, petW, petH, top = 0 }) {
   anchor = { x: anchorX, y: anchorY };
+  headroom = top;
   if (petW && petH) petBox = { w: petW, h: petH };
   const p = petPoint();
   if (SELFTEST && process.argv.includes('--trace-drag')) console.log(`[layout] ${Date.now() % 100000} ${width}x${height} anchor ${anchorX},${anchorY} feet ${p.x},${p.y}`);
@@ -266,7 +277,7 @@ function placeBalloon() {
   const [wx, wy] = win.getPosition();
   const fx = wx + anchor.x;
   const fy = wy + anchor.y;
-  const petTop = fy - petBox.h;
+  const petTop = fy - petBox.h - headroom;
   const { workArea: a } = screen.getDisplayNearestPoint({ x: fx, y: fy });
   const bh = balloon.h;
   const { tail, corner } = balloonTheme();
@@ -389,6 +400,9 @@ function switchCharacter(id) {
 function updateSettings(patch) {
   if (patch.scale !== undefined) patch.scale = Math.min(2, Math.max(0.5, Number(patch.scale) || 1));
   if (patch.balloon !== undefined && !(patch.balloon in BALLOON_THEMES)) delete patch.balloon;
+  if (patch.focusSeconds !== undefined && !validSeconds('focus', patch.focusSeconds)) delete patch.focusSeconds;
+  if (patch.breakSeconds !== undefined && !validSeconds('break', patch.breakSeconds)) delete patch.breakSeconds;
+  if (patch.timerSound !== undefined && !(patch.timerSound in SOUNDS)) delete patch.timerSound;
   const prev = { ...settings };
   if (patch.character && patch.character !== prev.character) switchCharacter(patch.character);
   Object.assign(settings, patch);
@@ -487,6 +501,7 @@ function buildContextMenu() {
         click: () => updateSettings({ character: c.id }),
       })),
     },
+    { label: 'Focus Timer', submenu: timerMenu() },
     { type: 'separator' },
     { label: 'New Conversation', click: () => { assistant.reset(); win.webContents.send('chat:reset'); } },
     { label: 'Assistant Settings…', click: () => openSettings() },
@@ -497,8 +512,11 @@ function buildContextMenu() {
 
 function updateTray() {
   if (!tray) return;
+  const t = timer.status();
+  trayLeft = t.left ? timeLeft(t) : '';
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: 'Desktop Assistant', type: 'checkbox', checked: settings.enabled, click: (item) => updateSettings({ enabled: item.checked }) },
+    { label: 'Focus Timer', submenu: timerMenu() },
     { label: 'Assistant Settings…', click: () => openSettings() },
     { type: 'separator' },
     { label: 'Quit Assistant', click: () => app.quit() },
@@ -510,6 +528,94 @@ function createTray() {
   tray.setTitle('📎');
   tray.setToolTip('Deskling');
   updateTray();
+}
+
+// ---- focus timer ----------------------------------------------------------
+// Runs here, so it keeps time while the pet is hidden. The pet shows it as a
+// small pill above its head and gives the reminders; with the pet hidden, a
+// system notification does.
+
+const timer = new FocusTimer({ onChange: timerChanged, onEnd: timerEnded, second: TIMER_DEMO ? 1000 / TIMER_DEMO : 1000 });
+// Time left in the menus, in whole minutes, so the tray's copy (which only
+// changes when rebuilt) is refreshed once a minute rather than every second.
+const timeLeft = (t) => minutesLeft(Math.ceil(t.left / timer.second));
+let trayLeft = '';
+setInterval(() => {
+  timer.check();
+  const t = timer.status();
+  if (!t.left || t.paused) return;
+  win?.webContents.send('timer:status', t);
+  if (timeLeft(t) !== trayLeft) updateTray();
+}, 1000);
+
+function timerChanged(status) {
+  win?.webContents.send('timer:status', status);
+  updateTray();
+}
+
+function startTimer(focus = settings.focusSeconds, rest = settings.breakSeconds) {
+  if (focus !== settings.focusSeconds || rest !== settings.breakSeconds) updateSettings({ focusSeconds: focus, breakSeconds: rest });
+  timer.start(focus, rest);
+}
+
+function timerAction(action) {
+  if (action === 'start') startTimer();
+  else if (['pause', 'resume', 'skip', 'stop'].includes(action)) timer[action]();
+}
+
+function timerEvent({ ended, seconds, next, rounds }) {
+  const where = win?.isVisible() ? 'by clicking the timer above you' : 'from Focus Timer in the menu bar';
+  return ended === 'focus'
+    ? `The user's focus session of ${duration(seconds)} just ended (${rounds} finished today), and a break of ${duration(next)} has started. Congratulate them and suggest one concrete way to rest, such as stretching, drinking water or looking away from the screen.`
+    : `The user's break of ${duration(seconds)} is over. Encourage them to start the next focus session when they are ready, ${where}.`;
+}
+
+// The character's reminder: written by the model, or a preset line if it
+// cannot (no Ollama, no model, too slow).
+async function timerRemark(info) {
+  try {
+    return await assistant.remark(timerEvent(info), { locale: app.getLocale() });
+  } catch (e) {
+    console.warn(`[timer] preset reminder (${e.message})`);
+    const key = info.ended === 'focus' ? 'focusDone' : 'breakDone';
+    const lines = assistant.persona?.timer?.[key] || (key === 'focusDone'
+      ? ['Focus session done! Time for a short break.']
+      : ["Break's over. Ready for another round?"]);
+    return lines[Math.floor(Math.random() * lines.length)];
+  }
+}
+
+// The sound plays from the pet window, hidden or not.
+async function timerEnded(info) {
+  const sound = SOUNDS[settings.timerSound].file;
+  if (sound) win?.webContents.send('timer:sound', sound);
+  if (win?.isVisible()) return win.webContents.send('timer:end', info);
+  const body = await timerRemark(info);
+  const silent = Boolean(sound);
+  if (Notification.isSupported()) new Notification({ title: info.ended === 'focus' ? 'Focus session done' : 'Break is over', body, silent }).show();
+}
+
+function timerMenu() {
+  const t = timer.status();
+  if (t.phase === 'focus' || t.phase === 'break') {
+    return [
+      { label: `${t.phase === 'focus' ? 'Focusing' : 'On a break'} · ${timeLeft(t)} left${t.paused ? ' (paused)' : ''}`, enabled: false },
+      t.paused ? { label: 'Resume', click: () => timer.resume() } : { label: 'Pause', click: () => timer.pause() },
+      { label: t.phase === 'focus' ? 'Skip to Break' : 'Skip Break', click: () => timer.skip() },
+      { label: 'Stop', click: () => timer.stop() },
+    ];
+  }
+  return [
+    { label: `Start Focus · ${duration(settings.focusSeconds)}`, click: () => startTimer() },
+    ...(t.phase === 'ready' ? [{ label: 'Stop', click: () => timer.stop() }] : []),
+    { type: 'separator' },
+    ...PRESETS.map(([focus, rest]) => ({
+      label: `${duration(focus)} focus, ${duration(rest)} break`, type: 'radio',
+      checked: focus === settings.focusSeconds && rest === settings.breakSeconds,
+      click: () => startTimer(focus, rest),
+    })),
+    { label: 'Customize…', click: () => openSettings('behavior') },
+  ];
 }
 
 // ---- IPC ------------------------------------------------------------------
@@ -608,6 +714,7 @@ function registerIpc() {
     characters: listCharacters().map(characterCard),
     ai: await assistant.refresh(settings.model),
     styles: RESPONSE_STYLES,
+    timer: { limits: LIMITS, sounds: SOUNDS },
     balloons: Object.fromEntries(Object.entries(BALLOON_THEMES).map(([id, t]) => [id, t.label])),
   }));
   ipcMain.on('settings:set', (_e, patch) => updateSettings(patch));
@@ -646,6 +753,9 @@ function registerIpc() {
     }
   });
   ipcMain.on('ai:cancel', () => assistant.cancel());
+  ipcMain.on('timer:action', (_e, action) => timerAction(action));
+  ipcMain.handle('timer:remark', (_e, info) => timerRemark(info));
+  ipcMain.handle('timer:status', () => timer.status());
 
   ipcMain.handle('audit:characters', () => listCharacters().map((c) => loadCharacter(c.id)));
   // Where the feet actually are vs. where they should be (macOS may clamp windows).
@@ -706,6 +816,7 @@ app.whenReady().then(() => {
   }
   createWindow();
   createTray();
+  if (TIMER_DEMO) timer.start(settings.focusSeconds, settings.breakSeconds);
 });
 
 app.on('window-all-closed', () => app.quit());

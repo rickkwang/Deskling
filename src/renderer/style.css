@@ -15,3 +15,53 @@ html, body {
   cursor: default;
 }
 #pet.crisp { image-rendering: pixelated; }
+
+/* Focus timer: a small pill above the pet's head (app.js lays it out), in
+   the balloon's theme (timer-themes.css sets the variables). The ring shows
+   the time used; hovering swaps it for what a click does. */
+#timer {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 20px;
+  padding: 0 9px 0 6px;
+  border: var(--pill-edge);
+  border-radius: var(--pill-radius);
+  background: var(--pill-bg);
+  box-shadow: var(--pill-shadow);
+  color: var(--pill-ink);
+  font: var(--pill-font);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(3px);
+  transition: opacity 200ms, transform 200ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+/* `display: flex` above would otherwise override the hidden attribute, and an
+   invisible pill would take clicks meant for the pet's head. */
+#timer[hidden] { display: none; }
+#timer.shown { opacity: 1; transform: none; }
+#timer:hover { background: var(--pill-hover, var(--pill-bg)); }
+#timer:focus-visible { outline: 2px solid var(--pill-focus); outline-offset: 1px; }
+#timer .icon { width: 12px; height: 12px; flex: none; overflow: visible; }
+#timer .track, #timer .arc { fill: none; stroke-width: 2; }
+#timer .track { stroke: var(--pill-track); }
+#timer .arc {
+  stroke: var(--pill-focus-color);
+  stroke-linecap: var(--pill-cap, round);
+  stroke-dasharray: var(--used, 0) 100;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+  transition: stroke-dasharray 900ms linear;
+}
+#timer[data-phase="break"] .arc { stroke: var(--pill-break-color); }
+#timer .glyph { fill: var(--pill-ink); display: none; }
+/* Paused or waiting for the next round: the glyph says what a click does. */
+#timer:hover .glyph, #timer.paused .glyph, #timer[data-phase="ready"] .glyph { display: inline; }
+#timer:hover .track, #timer:hover .arc,
+#timer.paused .track, #timer.paused .arc,
+#timer[data-phase="ready"] .track, #timer[data-phase="ready"] .arc { display: none; }
+#timer.paused .time { opacity: 0.55; }

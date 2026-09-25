@@ -12,7 +12,8 @@ const BASE_RULES = [
   // Small models invent features (drop files on me, I'll send that email)
   // unless told what the whole of their ability is.
   'All you can do is chat in this balloon: answer questions, explain, give tips, and write, rewrite or translate text the user types.',
-  'That is the whole app: you cannot receive files or drag-and-drop, and you cannot send email or messages, open apps or files, see the screen, browse the web, set reminders, or change anything on the computer.',
+  'You cannot receive files or drag-and-drop, and you cannot send email or messages, open apps or files, see the screen, browse the web, set reminders, or change anything on the computer.',
+  'The only other thing in the app is a focus timer (Pomodoro), which the user starts by right-clicking you and choosing Focus Timer; you cannot start, stop or change it yourself.',
   'Never offer or describe any other ability, and never claim to have done something; instead write the text for the user to use, or tell them the steps to do it themselves.',
 ].join(' ');
 // Last, closest to the reply, where small models follow it most reliably.
@@ -23,13 +24,20 @@ const SCRIPTS = [
   { re: /[\uac00-\ud7af]/g, name: 'Korean (한국어)' },
   { re: /[\u4e00-\u9fff]/g, name: 'Chinese (中文), in the same script (simplified or traditional)' },
 ];
-export function languageRule(text) {
+// With nothing typed yet (a timer reminder), `locale` (the system's, e.g.
+// "zh-CN") names the language instead.
+export function languageRule(text, locale = '') {
   const letters = (text.match(/\p{L}/gu) || []).length;
   const found = SCRIPTS.find(({ re }) => (text.match(re) || []).length >= Math.max(1, letters * 0.2));
   const unless = 'unless their standing instructions say otherwise';
-  return found
-    ? `The user is writing in ${found.name}: reply in ${found.name.split(' (')[0]}, ${unless}.`
-    : `Reply in the language of the user's latest message, ${unless}.`;
+  if (found) return `The user is writing in ${found.name}: reply in ${found.name.split(' (')[0]}, ${unless}.`;
+  if (!letters && locale) {
+    try {
+      const name = new Intl.DisplayNames(['en'], { type: 'language' }).of(locale.split('-')[0]);
+      if (name) return `Reply in ${name}, ${unless}.`;
+    } catch { /* not a language code */ }
+  }
+  return `Reply in the language of the user's latest message, ${unless}.`;
 }
 
 // Response Style options shown in Assistant Settings. Each sets the reply's
@@ -92,13 +100,13 @@ export class Assistant {
     };
   }
 
-  systemPrompt(text = '') {
+  systemPrompt(text = '', locale = '') {
     const style = RESPONSE_STYLES[this.behavior.responseStyle];
     const parts = [this.persona?.systemPrompt || '', BASE_RULES, style.prompt];
     if (this.behavior.instructions) {
       parts.push(`The user's standing instructions (follow them unless they conflict with the rules above): ${this.behavior.instructions}`);
     }
-    parts.push(languageRule(text));
+    parts.push(languageRule(text, locale));
     return parts.filter(Boolean).join(' ');
   }
 
@@ -126,7 +134,7 @@ export class Assistant {
     this.abort = new AbortController();
     const messages = [
       { role: 'system', content: this.systemPrompt(text) },
-      ...this.history,
+      ...this.history.map(({ role, content }) => ({ role, content })),
       { role: 'user', content: text },
     ];
     const { maxTokens } = RESPONSE_STYLES[this.behavior.responseStyle];
@@ -135,6 +143,27 @@ export class Assistant {
     this.history.push({ role: 'user', content: text }, { role: 'assistant', content: reply });
     this.history = this.history.slice(-MAX_HISTORY);
     this.abort = null;
+    return reply;
+  }
+
+  // One line in character about something that happened in the app (a timer
+  // running out), in the language the user last wrote in, else `locale`'s.
+  // Leaves a chat in progress alone; kept in history so the user can reply to
+  // it. Throws if there is no model or it takes longer than `timeoutMs`.
+  async remark(event, { locale = '', timeoutMs = 20_000 } = {}) {
+    if (!this.model) await this.refresh();
+    if (!this.model) throw new Error(this.status.available ? 'NO_LOCAL_MODEL' : 'OLLAMA_UNAVAILABLE');
+    const lastUser = this.history.findLast((m) => m.role === 'user' && !m.event)?.content || '';
+    const note = `[App event, not typed by the user] ${event} Say it in character in one or two short sentences.`;
+    const messages = [
+      { role: 'system', content: this.systemPrompt(lastUser, locale) },
+      ...this.history.map(({ role, content }) => ({ role, content })),
+      { role: 'user', content: note },
+    ];
+    const reply = (await this.provider.chat({ model: this.model, messages, maxTokens: 160, signal: AbortSignal.timeout(timeoutMs) })).trim();
+    if (!reply) throw new Error('EMPTY');
+    this.history.push({ role: 'user', content: note, event: true }, { role: 'assistant', content: reply });
+    this.history = this.history.slice(-MAX_HISTORY);
     return reply;
   }
 }

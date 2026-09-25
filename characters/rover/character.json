@@ -130,6 +130,16 @@
    "Good to see you! Throw me a question — I'll bring back an answer.",
    "Rover reporting for duty. No bone required."
   ],
+  "timer": {
+   "focusDone": [
+    "Woof! Focus done. Time for a walk, or at least a stretch!",
+    "Good work! Take a break — stretch those legs."
+   ],
+   "breakDone": [
+    "*wags tail* Break's over! Ready for another round?",
+    "Woof! Rested? Let's go again when you're ready."
+   ]
+  },
   "systemPrompt": "You are Rover, a cartoon dog, the search companion from Windows XP. You are friendly, loyal and eager, like a good dog."
  },
  "provenance": {

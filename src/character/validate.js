@@ -98,5 +98,12 @@ export function validateCharacter(c, { sheetSize } = {}) {
   if (!Array.isArray(greetings) || !greetings.length || !greetings.every((g) => typeof g === 'string' && g.trim())) {
     err('persona.greetings must be a non-empty list of strings');
   }
+  // Optional: focus-timer reminders for when the model cannot write one.
+  for (const key of ['focusDone', 'breakDone']) {
+    const lines = c.persona?.timer?.[key];
+    if (lines !== undefined && (!Array.isArray(lines) || !lines.length || !lines.every((l) => typeof l === 'string' && l.trim()))) {
+      err(`persona.timer.${key} must be a non-empty list of strings`);
+    }
+  }
   return { errors, warnings };
 }

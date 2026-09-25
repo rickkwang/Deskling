@@ -1,0 +1,106 @@
+/* Focus timer pill in each speech balloon theme (balloon-themes/<id>.css):
+   the same surface, edge, type and shadow as that theme's balloon. */
+
+@font-face {
+  font-family: "Geneva 9";
+  src: url("balloon-themes/fonts/FindersKeepers.woff2") format("woff2");
+}
+
+/* Classic: the pale yellow note with a dark outline. */
+[data-theme="classic"] {
+  --pill-bg: #fbefc2;
+  --pill-hover: #f7e7ad;
+  --pill-ink: #1f1d17;
+  --pill-edge: 1px solid #2e2b22;
+  --pill-radius: 10px;
+  --pill-shadow: 1.5px 2px 0 rgba(0, 0, 0, 0.16), 0 3px 3px rgba(0, 0, 0, 0.1);
+  --pill-font: 600 11px/1 Geneva, "Lucida Grande", "PingFang SC", -apple-system, sans-serif;
+  --pill-track: rgba(60, 50, 20, 0.18);
+  --pill-focus-color: #c2532f;
+  --pill-break-color: #5d8a3a;
+  --pill-focus: #2e2b22;
+}
+
+/* Aqua: aqua-tinted glass with a gel highlight on the top half and a blue rim. */
+[data-theme="aqua"] {
+  --pill-bg:
+    linear-gradient(rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.35) 50%, transparent 50%),
+    linear-gradient(rgba(236, 246, 255, 0.92), rgba(170, 215, 252, 0.95));
+  --pill-hover:
+    linear-gradient(rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.35) 50%, transparent 50%),
+    linear-gradient(rgba(220, 238, 255, 0.95), rgba(140, 200, 250, 0.98));
+  --pill-ink: #000;
+  --pill-edge: 1px solid rgba(35, 85, 160, 0.62);
+  --pill-radius: 10px;
+  --pill-shadow: 0 2px 3px rgba(0, 35, 90, 0.34);
+  --pill-font: 11px/1 "Lucida Grande", "PingFang SC", -apple-system, sans-serif;
+  --pill-track: rgba(40, 90, 160, 0.22);
+  --pill-focus-color: #3d8ae6;
+  --pill-break-color: #3aa655;
+  --pill-focus: #3d8ae6;
+}
+
+/* macOS: an NSPopover surface, light or dark with the system appearance. */
+[data-theme="macos"] {
+  --pill-bg: rgba(251, 251, 251, 0.92);
+  --pill-hover: rgba(242, 242, 242, 0.95);
+  --pill-ink: rgba(0, 0, 0, 0.85);
+  --pill-edge: 0.5px solid rgba(0, 0, 0, 0.25);
+  --pill-radius: 10px;
+  --pill-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+  --pill-font: 600 11px/1 -apple-system, "PingFang SC", sans-serif;
+  --pill-track: rgba(0, 0, 0, 0.12);
+  --pill-focus-color: #ff383c; /* systemRed */
+  --pill-break-color: #34c759; /* systemGreen */
+  --pill-focus: rgba(0, 103, 244, 0.5);
+  -webkit-font-smoothing: antialiased;
+}
+@media (prefers-color-scheme: dark) {
+  [data-theme="macos"] {
+    --pill-bg: rgba(33, 33, 33, 0.92);
+    --pill-hover: rgba(48, 48, 48, 0.95);
+    --pill-ink: rgba(255, 255, 255, 0.85);
+    --pill-edge: 0.5px solid rgba(0, 0, 0, 0.85);
+    --pill-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.14), 0 2px 8px rgba(0, 0, 0, 0.35);
+    --pill-track: rgba(255, 255, 255, 0.2);
+    --pill-focus-color: #ff4245;
+    --pill-break-color: #30d158;
+    --pill-focus: rgba(26, 169, 255, 0.5);
+  }
+}
+
+/* Windows 98: a raised silver button face with the 3D frame, in Tahoma. */
+[data-theme="win98"] {
+  --pill-bg: #c0c0c0;
+  --pill-ink: #000;
+  --pill-edge: 0;
+  --pill-radius: 0;
+  --pill-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf;
+  --pill-font: 11px/1 Tahoma, "MS Sans Serif", Geneva, sans-serif;
+  --pill-track: #808080;
+  --pill-focus-color: #000080;
+  --pill-break-color: #008000;
+  --pill-cap: butt;
+  --pill-focus: #000;
+}
+[data-theme="win98"] #timer:active { box-shadow: inset -1px -1px #fff, inset 1px 1px #0a0a0a, inset -2px -2px #dfdfdf, inset 2px 2px #808080; }
+[data-theme="win98"] #timer:focus-visible { outline: 1px dotted #000; outline-offset: -4px; }
+
+/* System 7: Balloon Help's white rounded box in black with a one-pixel
+   shadow, in Geneva 9 (16px draws one font pixel per CSS pixel). */
+[data-theme="system7"] {
+  --pill-bg: #fff;
+  --pill-ink: #000;
+  --pill-edge: 1px solid #000;
+  --pill-radius: 10px;
+  --pill-shadow: 1px 1px 0 #000;
+  --pill-font: 16px/1 "Geneva 9", Geneva, sans-serif;
+  --pill-track: #c0c0c0;
+  --pill-focus-color: #000;
+  --pill-break-color: #000;
+  --pill-cap: butt;
+  --pill-focus: #000;
+}
+[data-theme="system7"] #timer { -webkit-font-smoothing: none; }
+[data-theme="system7"] #timer:active { background: #000; color: #fff; }
+[data-theme="system7"] #timer:active .glyph { fill: #fff; }

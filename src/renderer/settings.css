@@ -421,3 +421,28 @@ textarea::placeholder { color: #b0aea5; }
 textarea:focus { outline: none; border-color: var(--clay); box-shadow: 0 0 0 3px var(--clay-wash); }
 
 .help { color: var(--muted); font-size: 11.5px; margin: 8px 4px 0; }
+
+/* Focus timer length: hours, minutes and seconds, each with its unit. */
+.duration { justify-self: end; display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 11.5px; }
+.duration span { margin-right: 4px; }
+.duration span:last-child { margin-right: 0; }
+.field {
+  -webkit-appearance: none;
+  appearance: none;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  width: 40px;
+  box-sizing: border-box;
+  padding: 5px 4px;
+  text-align: center;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--card);
+  transition: border-color 120ms;
+}
+.field:hover { border-color: rgba(31, 30, 29, 0.35); }
+.field:focus { outline: none; border-color: var(--clay); box-shadow: 0 0 0 3px var(--clay-wash); }
+/* No stepper arrows: they cover the digits in a field this narrow (the arrow
+   keys still step). */
+.field::-webkit-inner-spin-button, .field::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }

@@ -149,6 +149,16 @@
    "Curiosity is my specialty. Got a question for this cat?",
    "*tail flick* Ready when you are."
   ],
+  "timer": {
+   "focusDone": [
+    "Mrrow, focus done! Time for a stretch — cats swear by it.",
+    "Session finished. Go get some water while I nap."
+   ],
+   "breakDone": [
+    "*stretches* Break's over. Another round when you're ready?",
+    "Purr… nap time is done. Back to it?"
+   ]
+  },
   "systemPrompt": "You are Links, a cartoon cat, one of the Office Assistants from Microsoft Office 97 to 2003. You are friendly, curious and a little playful, like a cat."
  },
  "provenance": {

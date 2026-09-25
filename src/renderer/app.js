@@ -1,13 +1,19 @@
 import { CharacterRuntime } from '../runtime/character-runtime.js';
 import { validateCharacter } from '../character/validate.js';
 import { speak, cancelSpeech } from './speech.js';
+import { clock } from '../main/focus-timer.js';
 
 const petEl = document.querySelector('#pet');
+const timerEl = document.querySelector('#timer');
 
 // The pet window is just big enough for the pet and never changes for the
 // balloon, which is a separate window placed by main (bubble.html). Main keeps
 // the pet's feet at the same screen point when the pet's size changes.
 const PAD = 6; // transparent margin around the pet
+// Focus timer pill (style.css), above the pet's head: wider for "1:25:00".
+const TIMER_W = { short: 68, long: 92 };
+const TIMER_H = 20;
+const TIMER_GAP = 3;
 
 let runtime = null;
 let character = null;
@@ -42,16 +48,21 @@ async function applyLayout() {
   const { cellWidth, cellHeight } = character.spritesheet;
   const petW = Math.round(cellWidth * scale);
   const petH = Math.round(cellHeight * scale);
-  const w = petW + PAD * 2;
+  const top = timerEl.hidden ? 0 : TIMER_H + TIMER_GAP;
+  const pillW = TIMER_W[timerEl.dataset.width || 'short'];
+  const w = Math.max(petW, pillW) + PAD * 2;
   const cx = Math.round(w / 2);
-  const baseline = PAD + petH;
+  const baseline = PAD + top + petH;
   // Positioned unscaled, then scaled around the feet.
   petEl.style.left = `${Math.round(cx - cellWidth / 2)}px`;
   petEl.style.top = `${baseline - cellHeight}px`;
   petEl.style.transform = scale === 1 ? '' : `scale(${scale})`;
   // Pixel-exact only when every sprite pixel maps to whole device pixels.
   petEl.classList.toggle('crisp', Number.isInteger(scale * window.devicePixelRatio));
-  await window.pet.layout({ width: w, height: baseline + PAD, anchorX: cx, anchorY: baseline, petW, petH });
+  timerEl.style.left = `${cx - pillW / 2}px`;
+  timerEl.style.top = `${PAD}px`;
+  timerEl.style.width = `${pillW}px`;
+  await window.pet.layout({ width: w, height: baseline + PAD, anchorX: cx, anchorY: baseline, petW, petH, top });
 }
 
 // ---- balloon ----------------------------------------------------------------
@@ -119,6 +130,9 @@ window.pet.onToken((token) => {
   say(streamed.trimStart());
 });
 
+// A reminder from the focus timer waits for a reply in progress to finish.
+let pendingReminder = null;
+
 async function ask(text) {
   if (busy || !text) return;
   busy = true;
@@ -145,8 +159,67 @@ async function ask(text) {
     runtime.setState('idle');
     runtime.act('confused');
   }
+  if (pendingReminder) remind(pendingReminder);
   return res;
 }
+
+// ---- focus timer ------------------------------------------------------------
+// Main keeps the time; this shows it as a pill above the pet's head and gives
+// the reminders in the balloon.
+
+const GLYPHS = {
+  pause: 'M4.5 3.5h2.2v9H4.5zM9.3 3.5h2.2v9H9.3z',
+  play: 'M5 3.2v9.6L12.8 8z',
+};
+let timerState = { phase: 'off' };
+
+function renderTimer(t) {
+  timerState = t;
+  const running = t.phase === 'focus' || t.phase === 'break';
+  const show = running || t.phase === 'ready';
+  timerEl.dataset.phase = t.phase;
+  timerEl.classList.toggle('paused', Boolean(t.paused));
+  if (show) {
+    timerEl.querySelector('.time').textContent = running ? clock(t.left) : clock(t.seconds.focus * 1000);
+    timerEl.style.setProperty('--used', running ? (100 * (1 - t.left / t.total)).toFixed(2) : 0);
+    timerEl.querySelector('.glyph').setAttribute('d', running && !t.paused ? GLYPHS.pause : GLYPHS.play);
+    const what = { focus: 'Focus', break: 'Break', ready: 'Break over' }[t.phase];
+    const click = t.phase === 'ready' ? 'start the next focus session' : t.paused ? 'resume' : 'pause';
+    timerEl.title = `${what}${t.paused ? ' (paused)' : ''}. Click to ${click}; right-click the pet for more.`;
+  }
+  // Sized per phase (not per tick), so it never changes while counting down.
+  const width = show && t.seconds[running ? t.phase : 'focus'] >= 3600 ? 'long' : 'short';
+  if (show === !timerEl.hidden && width === timerEl.dataset.width) return;
+  timerEl.dataset.width = width;
+  timerEl.hidden = !show;
+  applyLayout();
+  requestAnimationFrame(() => timerEl.classList.toggle('shown', show));
+}
+
+timerEl.addEventListener('click', () => {
+  const t = timerState;
+  window.pet.timer.action(t.phase === 'ready' ? 'start' : t.paused ? 'resume' : 'pause');
+});
+window.pet.timer.onStatus(renderTimer);
+
+async function remind(info) {
+  if (busy) { pendingReminder = info; return; }
+  pendingReminder = null;
+  busy = true;
+  cancelSpeech();
+  content = { text: '', error: false, dots: true };
+  // Done focusing: congratulate; break over: get the user's attention.
+  runtime.setState('idle');
+  runtime.act(info.ended === 'focus' ? 'acknowledge' : 'getAttention');
+  openBubble();
+  const text = await window.pet.timer.remark(info);
+  busy = false;
+  say(text);
+  if (pendingReminder) return remind(pendingReminder);
+  if (settings.speech) speak(text);
+}
+window.pet.timer.onEnd(remind);
+window.pet.timer.onSound((file) => new Audio(`sounds/${file}`).play().catch(() => {}));
 
 // ---- input: click vs drag, click-through ---------------------------------
 
@@ -162,7 +235,7 @@ let press = null;
 document.addEventListener('mousemove', (e) => {
   if (press) return;
   const el = document.elementFromPoint(e.clientX, e.clientY);
-  setInteractive(Boolean(el?.closest('#pet')));
+  setInteractive(Boolean(el?.closest('#pet, #timer')));
 });
 document.addEventListener('mouseleave', () => { if (!press) setInteractive(false); });
 
@@ -232,6 +305,7 @@ window.pet.onVisibility((v) => (v === 'hide' ? hidePet() : runtime.show()));
 window.pet.onSettings((next) => {
   const rescale = next.scale !== settings.scale;
   settings = next;
+  document.body.dataset.theme = settings.balloon;
   if (rescale) applyLayout();
   if (!settings.speech) cancelSpeech();
 });
@@ -264,7 +338,9 @@ let selftest = false;
 const init = await window.pet.init();
 selftest = init.selftest;
 settings = init.settings;
+document.body.dataset.theme = settings.balloon;
 mountCharacter(init.character);
+renderTimer(await window.pet.timer.status());
 log(`ai: ${init.ai.available ? `ollama ok, local models [${init.ai.models.join(', ')}], using ${init.ai.model}` : `unavailable (${init.ai.error})`}`);
 // Greeting setting: "Say hello when the assistant opens" (Greeting animation +
 // balloon); otherwise just the plain Show animation.
