@@ -1,0 +1,82 @@
+/* macOS: NSPopover as drawn by macOS 26, measured from a real one: a 17-pt
+   corner radius, a 29 × 12 arrow with a rounded tip that flares into the
+   edge, a half-point edge (dark mode adds a light line inside it), and a
+   soft shadow. Light or dark with the system appearance. Controls use the
+   system colours: 13-pt text, a 22-pt field with a half-transparent
+   accent focus ring, and a push button that turns accent blue as the default. */
+[data-theme="macos"] {
+  --font: 13px/16px -apple-system, "PingFang SC", sans-serif;
+  --surface: rgba(251, 251, 251, 0.92);
+  --ink: rgba(0, 0, 0, 0.85); /* labelColor */
+  --hint: rgba(0, 0, 0, 0.5); /* placeholderTextColor */
+  --rule: rgba(0, 0, 0, 0.1); /* separatorColor */
+  --edge: rgba(0, 0, 0, 0.25);
+  --field: #fff; /* textBackgroundColor */
+  --field-edge: rgba(0, 0, 0, 0.12);
+  --focus: rgba(0, 103, 244, 0.5); /* keyboardFocusIndicatorColor */
+  --button: rgba(0, 0, 0, 0.09);
+  --accent: #007aff; /* controlAccentColor */
+  --error: #ff383c; /* systemRed */
+  --radius: 17;
+  --tail-shape: popover;
+  --shadow-blur: 4;
+  -webkit-font-smoothing: antialiased;
+}
+@media (prefers-color-scheme: dark) {
+  [data-theme="macos"] {
+    --surface: rgba(33, 33, 33, 0.92);
+    --ink: rgba(255, 255, 255, 0.85);
+    --hint: rgba(255, 255, 255, 0.55);
+    --rule: rgba(255, 255, 255, 0.1);
+    --edge: rgba(0, 0, 0, 0.85);
+    --field: #1e1e1e;
+    --field-edge: rgba(255, 255, 255, 0.12);
+    --focus: rgba(26, 169, 255, 0.5);
+    --button: rgba(255, 255, 255, 0.12);
+    --error: #ff4245;
+  }
+}
+[data-theme="macos"] #shape .fill { fill: var(--surface); }
+[data-theme="macos"] #shape .rim { stroke: var(--edge); stroke-width: 0.5; }
+[data-theme="macos"] #shape .shadow-soft { fill: rgba(0, 0, 0, 0.2); transform: translate(0, 2px); }
+/* Dark mode's light inner line (a clipped double-width stroke, like Aqua's). */
+[data-theme="macos"] #shape .glass { display: inline; }
+[data-theme="macos"] #shape .glow, [data-theme="macos"] #shape .sheen, [data-theme="macos"] #shape .inner-rim { display: none; }
+[data-theme="macos"] #shape .inner-rim { fill: none; stroke: rgba(255, 255, 255, 0.28); stroke-width: 2; }
+@media (prefers-color-scheme: dark) {
+  [data-theme="macos"] #shape .inner-rim { display: inline; }
+}
+
+[data-theme="macos"] #msg { padding: 11px 14px 9px; }
+[data-theme="macos"] #msg::-webkit-scrollbar { width: 8px; }
+[data-theme="macos"] #msg::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 4px;
+  background: var(--hint) padding-box;
+}
+
+[data-theme="macos"] #ask { gap: 8px; padding: 8px 10px 10px 12px; }
+
+[data-theme="macos"] #input {
+  height: 22px;
+  border: 0.5px solid var(--field-edge);
+  border-radius: 5px;
+  background: var(--field);
+  padding: 0 6px;
+}
+[data-theme="macos"] #input:focus { box-shadow: 0 0 0 3.5px var(--focus); }
+
+[data-theme="macos"] #send {
+  width: auto;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 6px;
+  font: inherit;
+  background: var(--button);
+  color: var(--ink);
+}
+[data-theme="macos"] .send-icon { display: none; }
+[data-theme="macos"] .send-label { display: block; }
+[data-theme="macos"] #send:disabled { color: var(--hint); }
+[data-theme="macos"] #send:not(:disabled) { background: var(--accent); color: #fff; }
+[data-theme="macos"] #send:not(:disabled):active { filter: brightness(0.88); }

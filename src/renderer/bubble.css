@@ -1,12 +1,14 @@
 /* The balloon lives in its own window, sized by main to fit it exactly:
-   a 10px band on every side holds the shadow and, on one side, the tail. */
+   a 14px band on every side holds the shadow and, on one side, the tail.
+
+   This file is the layout every balloon theme shares. The look lives in
+   balloon-themes/<theme>.css, scoped by body[data-theme] (set by bubble.js
+   from the Balloon setting). A theme sets:
+   - the geometry bubble.js reads: --radius, --tail-shape (straight, popover
+     or corner) and --shadow-blur (the tail's length is set in main.js);
+   - the colours of the SVG shape (#shape .fill, .rim, .shadow-soft, ...);
+   - the look of #msg, #ask, #input and #send. */
 :root {
-  --paper: #fbefc2;
-  --ink: #1f1d17;
-  --edge: #2e2b22;
-  --rule: #ddd0a0;
-  --hint: #9b937a;
-  --tail: 7px;
   --tail-left: 186px; /* tail tip, from the balloon's left edge (set by main) */
 }
 
@@ -14,24 +16,20 @@ html, body {
   margin: 0;
   background: transparent;
   overflow: hidden;
-  font: 12px/1.42 Geneva, "Lucida Grande", "PingFang SC", -apple-system, sans-serif;
-  color: var(--ink);
   user-select: none;
   -webkit-user-select: none;
 }
 
-body { padding: 10px; }
+body { padding: 14px; } /* main.js BALLOON_MARGIN */
 
 #bubble {
   position: relative;
   width: 264px;
   box-sizing: border-box;
-  background: var(--paper);
-  border: 1px solid var(--edge);
-  border-radius: 9px;
-  box-shadow:
-    1.5px 2px 0 rgba(0, 0, 0, 0.16),
-    0 4px 10px rgba(0, 0, 0, 0.14);
+  padding: 1px; /* the rim */
+  isolation: isolate; /* keeps the shape (z-index -1) behind the content */
+  font: var(--font);
+  color: var(--ink);
   transform-origin: var(--tail-left) 0;
   /* Hidden: faded out, slightly tucked into the tail. Transitions (rather
      than keyframes) reverse smoothly when interrupted. Leaving eases out... */
@@ -48,17 +46,20 @@ body.open #bubble {
   transition: opacity 160ms ease-out, transform 260ms cubic-bezier(0.2, 0.9, 0.25, 1);
 }
 
-/* Tail: outlined triangle pointing at the pet. */
-#bubble::before, #bubble::after {
-  content: "";
+/* The balloon's shape: body and tail are one path (bubble.js draws it), so
+   fill, rim and shadow run around the tail without seams. Themes switch on
+   the optional layers they use. */
+#shape {
   position: absolute;
-  left: calc(var(--tail-left) - var(--tail));
-  border: var(--tail) solid transparent;
+  left: 0;
+  top: 0;
+  z-index: -1;
+  overflow: visible;
+  pointer-events: none;
 }
-body.below #bubble::before { top: calc(var(--tail) * -2); border-bottom-color: var(--edge); }
-body.below #bubble::after { top: calc(var(--tail) * -2 + 1.4px); border-bottom-color: var(--paper); }
-body.above #bubble::before { bottom: calc(var(--tail) * -2); border-top-color: var(--edge); }
-body.above #bubble::after { bottom: calc(var(--tail) * -2 + 1.4px); border-top-color: var(--paper); }
+#shape .shadow-soft, #shape .shadow-hard { fill: none; }
+#shape .glass, #shape .bevel, #shape .tail-patch { display: none; }
+#shape .rim { fill: none; stroke-width: 1; }
 
 #msg {
   padding: 11px 13px 10px;
@@ -71,7 +72,7 @@ body.above #bubble::after { bottom: calc(var(--tail) * -2 + 1.4px); border-top-c
   cursor: text;
 }
 #msg:empty { display: none; }
-#msg.error { color: #6b2b12; }
+#msg.error { color: var(--error); }
 
 /* Waiting for the model: "Thinking…" with a light sweeping across it. */
 .dots {
@@ -94,11 +95,12 @@ body.above #bubble::after { bottom: calc(var(--tail) * -2 + 1.4px); border-top-c
   padding: 8px 10px 8px 13px;
   border-top: 1px solid var(--rule);
 }
-#msg:empty + #ask { border-top: 0; }
+#msg:empty + #ask { border-top: 0; box-shadow: none; }
 
 #input {
   flex: 1;
   min-width: 0;
+  box-sizing: border-box;
   border: 0;
   outline: 0;
   background: transparent;
@@ -114,15 +116,8 @@ body.above #bubble::after { bottom: calc(var(--tail) * -2 + 1.4px); border-top-c
   height: 22px;
   padding: 0; /* UA padding (1px 6px) pushed the 12px icon off-center */
   border: 0;
-  border-radius: 50%;
   display: grid;
   place-items: center;
-  background: rgba(60, 50, 20, 0.07);
-  color: rgba(60, 50, 20, 0.32);
-  transition: background 120ms, color 120ms;
 }
-#send:not(:disabled) {
-  background: var(--edge);
-  color: var(--paper);
-}
-#send:not(:disabled):active { transform: translateY(1px); }
+/* An arrow icon, or a "Send" push button where that is the platform's way. */
+.send-label { display: none; }

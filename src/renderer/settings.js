@@ -2,7 +2,7 @@
 // the main process, which persists it and broadcasts it to the pet.
 
 const $ = (sel) => document.querySelector(sel);
-const { settings: initial, characters, ai, styles } = await window.pet.getSettings();
+const { settings: initial, characters, ai, styles, balloons } = await window.pet.getSettings();
 let settings = initial;
 
 // ---- tabs ------------------------------------------------------------------
@@ -128,6 +128,33 @@ grid.addEventListener('keydown', (e) => {
   next.tile.click();
 });
 
+// Balloon style: a miniature of each look (settings.css .mini-<id>).
+const balloonRow = $('#balloons');
+const balloonTiles = Object.entries(balloons).map(([id, label]) => {
+  const tile = document.createElement('button');
+  tile.className = 'tile';
+  tile.setAttribute('role', 'radio');
+  const mini = document.createElement('span');
+  mini.className = `mini mini-${id}`;
+  mini.textContent = 'Hi!';
+  const name = document.createElement('span');
+  name.textContent = label;
+  tile.append(mini, name);
+  tile.addEventListener('click', () => window.pet.setSettings({ balloon: id }));
+  balloonRow.append(tile);
+  return { tile, id };
+});
+
+balloonRow.addEventListener('keydown', (e) => {
+  const step = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
+  if (!step) return;
+  e.preventDefault();
+  const i = balloonTiles.findIndex((t) => t.tile === document.activeElement);
+  const next = balloonTiles[Math.max(0, Math.min(balloonTiles.length - 1, i + step))];
+  next.tile.focus();
+  next.tile.click();
+});
+
 // ---- behavior tab ------------------------------------------------------------
 
 const styleSelect = $('#style');
@@ -182,6 +209,11 @@ function updateCount() {
 function render() {
   for (const { tile, card } of tiles) {
     const on = card.id === settings.character;
+    tile.setAttribute('aria-checked', String(on));
+    tile.tabIndex = on ? 0 : -1;
+  }
+  for (const { tile, id } of balloonTiles) {
+    const on = id === settings.balloon;
     tile.setAttribute('aria-checked', String(on));
     tile.tabIndex = on ? 0 : -1;
   }

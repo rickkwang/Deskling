@@ -264,6 +264,89 @@ input[type="range"]::-webkit-slider-thumb {
 input[type="range"]:focus-visible { outline: none; }
 input[type="range"]:focus-visible::-webkit-slider-thumb { outline: 2px solid var(--clay); outline-offset: 2px; }
 
+/* Balloon style: five miniatures of the speech balloon, each in its theme's
+   colours and type (the real ones are src/renderer/balloon-themes/). */
+.balloons {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+.balloons .tile { padding: 10px 2px 7px; gap: 8px; }
+
+.mini {
+  position: relative;
+  width: 50px;
+  height: 28px;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  font: 11px/1 var(--mini-font, var(--sans));
+  color: #000;
+  background: var(--mini-bg);
+  border: 1px solid;
+  border-color: var(--mini-edge); /* one colour, or four */
+  border-radius: var(--mini-radius);
+  box-shadow: var(--mini-shadow, none);
+}
+/* The tail: a rotated square showing two edges, over the body's outline. */
+.mini::after {
+  content: "";
+  position: absolute;
+  left: 11px;
+  bottom: -4.5px;
+  width: 6px;
+  height: 6px;
+  background: var(--mini-tail, var(--mini-bg));
+  border: solid;
+  border-color: var(--mini-edge);
+  border-width: 0 1px 1px 0;
+  transform: rotate(45deg);
+}
+.mini-classic {
+  --mini-bg: #fbefc2;
+  --mini-edge: #2e2b22;
+  --mini-radius: 6px;
+  --mini-shadow: 1px 1.5px 0 rgba(0, 0, 0, 0.16);
+  --mini-font: Geneva, sans-serif;
+  color: #1f1d17;
+}
+.mini-aqua {
+  --mini-bg:
+    linear-gradient(rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.35)) 2px 1.5px / calc(100% - 4px) 10px no-repeat,
+    linear-gradient(#eef6ff, #c4e2fc);
+  --mini-tail: #c4e2fc;
+  --mini-edge: #5f86bd;
+  --mini-radius: 7px;
+  --mini-shadow: 0 1.5px 3px rgba(0, 35, 90, 0.3);
+  --mini-font: "Lucida Grande", sans-serif;
+  color: #111722;
+}
+.mini-macos {
+  --mini-bg: #f6f6f6;
+  --mini-edge: rgba(0, 0, 0, 0.16);
+  --mini-tail: #f6f6f6;
+  --mini-radius: 10px;
+  --mini-shadow: 0 2px 5px rgba(0, 0, 0, 0.16);
+  --mini-font: -apple-system, sans-serif;
+  border-width: 0.5px;
+  color: #1d1d1f;
+}
+.mini-macos::after { border-width: 0 0.5px 0.5px 0; }
+.mini-win98 {
+  --mini-bg: #c0c0c0;
+  --mini-radius: 0;
+  --mini-edge: #dfdfdf #0a0a0a #0a0a0a #dfdfdf;
+  --mini-shadow: inset 1px 1px #fff, inset -1px -1px #808080;
+  --mini-font: Tahoma, sans-serif;
+}
+.mini-system7 {
+  --mini-bg: #fff;
+  --mini-edge: #000;
+  --mini-radius: 5px;
+  --mini-shadow: 1px 1px 0 #000;
+  --mini-font: Geneva, sans-serif;
+}
+
 .tip { color: var(--muted); font-size: 11.5px; margin: 10px 4px 0; }
 
 /* ---- behavior tab --------------------------------------------------------- */

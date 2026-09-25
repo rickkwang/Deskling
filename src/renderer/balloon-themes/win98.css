@@ -1,0 +1,84 @@
+/* Windows 98: a raised silver panel with the Windows 3D frame (outer line
+   light grey on the top and left, near-black on the bottom and right; inner
+   line white and dark grey), a sunken white field, and a "Send" push button
+   drawn as the default button (the extra black frame), in Tahoma. Colours
+   and bevels as in 98.css (github.com/jdan/98.css), which matches the
+   Windows 98 system colours. */
+[data-theme="win98"] {
+  --font: 11px/1.45 Tahoma, "MS Sans Serif", Geneva, "PingFang SC", sans-serif;
+  --face: #c0c0c0;
+  --ink: #000;
+  --hint: #808080;
+  --rule: #808080;
+  --error: #800000;
+  --radius: 0;
+  --tail-shape: straight;
+  --shadow-blur: 0;
+}
+[data-theme="win98"] #shape .fill { fill: var(--face); }
+[data-theme="win98"] #shape .rim { stroke: none; }
+[data-theme="win98"] #shape .bevel { display: inline; }
+[data-theme="win98"] #shape .bevel-outer-light { fill: none; stroke: #dfdfdf; }
+[data-theme="win98"] #shape .bevel-outer-dark { fill: none; stroke: #0a0a0a; }
+[data-theme="win98"] #shape .bevel-inner-light { fill: none; stroke: #fff; }
+[data-theme="win98"] #shape .bevel-inner-dark { fill: none; stroke: #808080; }
+/* Covers the inner line where the tail opens into the panel. */
+[data-theme="win98"] #shape .tail-patch { display: inline; fill: var(--face); }
+
+[data-theme="win98"] ::selection { background: #000080; color: #fff; }
+
+[data-theme="win98"] #msg { padding: 9px 11px 8px; }
+/* Scroll bar: dithered track, raised thumb, arrow buttons (98.css art). */
+[data-theme="win98"] #msg::-webkit-scrollbar { width: 16px; }
+[data-theme="win98"] #msg::-webkit-scrollbar-track {
+  background: repeating-conic-gradient(#c0c0c0 0 25%, #fff 0 50%) 0 0 / 2px 2px;
+}
+[data-theme="win98"] #msg::-webkit-scrollbar-thumb {
+  background: var(--face);
+  box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #dfdfdf, inset -2px -2px #808080, inset 2px 2px #fff;
+}
+[data-theme="win98"] #msg::-webkit-scrollbar-button:vertical:start:decrement,
+[data-theme="win98"] #msg::-webkit-scrollbar-button:vertical:end:increment {
+  display: block;
+  height: 17px;
+}
+[data-theme="win98"] #msg::-webkit-scrollbar-button:vertical:start { background: url("win98/scroll-up.svg"); }
+[data-theme="win98"] #msg::-webkit-scrollbar-button:vertical:end { background: url("win98/scroll-down.svg"); }
+
+/* Etched separator: grey over white. */
+[data-theme="win98"] #ask {
+  gap: 6px;
+  padding: 7px 8px 8px 9px;
+  box-shadow: inset 0 1px #fff;
+}
+
+[data-theme="win98"] #input {
+  height: 21px;
+  background: #fff;
+  padding: 3px 4px;
+  box-shadow: inset -1px -1px #fff, inset 1px 1px #808080, inset -2px -2px #dfdfdf, inset 2px 2px #0a0a0a;
+}
+
+/* Push button, 75 × 23, drawn as the default button: a black frame outside
+   the raised bevel. Pressed, the bevel sinks and the label shifts 1px. */
+[data-theme="win98"] #send {
+  width: 75px;
+  height: 23px;
+  font: inherit;
+  background: var(--face);
+  color: #000;
+  box-shadow:
+    inset -2px -2px #0a0a0a, inset 1px 1px #0a0a0a,
+    inset 2px 2px #fff, inset -3px -3px #808080, inset 3px 3px #dfdfdf;
+}
+[data-theme="win98"] .send-icon { display: none; }
+[data-theme="win98"] .send-label { display: block; }
+/* Disabled: grey text with a white emboss. */
+[data-theme="win98"] #send:disabled { color: #808080; text-shadow: 1px 1px #fff; }
+[data-theme="win98"] #send:not(:disabled):active {
+  box-shadow:
+    inset 2px 2px #0a0a0a, inset -1px -1px #0a0a0a,
+    inset -2px -2px #fff, inset 3px 3px #808080, inset -3px -3px #dfdfdf;
+}
+[data-theme="win98"] #send:not(:disabled):active .send-label { transform: translate(1px, 1px); }
+[data-theme="win98"] #send:focus-visible { outline: 1px dotted #000; outline-offset: -4px; }

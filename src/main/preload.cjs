@@ -30,6 +30,7 @@ contextBridge.exposeInMainWorld('pet', {
     onPlace: on('bubble:place'),
     onOpen: on('bubble:open'),
     onFocus: on('bubble:focus'),
+    onTheme: on('bubble:theme'),
     size: (h) => ipcRenderer.send('bubble:size', h),
     submit: (text) => ipcRenderer.send('bubble:submit', text),
     typing: () => ipcRenderer.send('bubble:typing'),

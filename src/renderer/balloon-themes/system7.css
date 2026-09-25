@@ -1,0 +1,93 @@
+/* System 7: Balloon Help, after Inside Macintosh: More Macintosh Toolbox
+   (Help Manager, figs. 3-2 to 3-9): a white rounded rectangle framed in black
+   with a one-pixel shadow on the right and bottom, a thin spike out of one
+   corner, and the help text in 9-point Geneva. The field and the "Send"
+   button use the system font, Chicago 12; the button is the default button,
+   ringed with a thick outline, and inverts when pressed.
+
+   Geneva 9 and Chicago 12 are Giles Booth's bitmap recreations
+   (FindersKeepers and ChiKareGo2, CC BY); 16px draws them one font pixel
+   per CSS pixel. Text they lack (Chinese, emoji) falls back to system fonts
+   scaled down to match. */
+@font-face {
+  font-family: "Geneva 9";
+  src: url("fonts/FindersKeepers.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Chicago 12";
+  src: url("fonts/ChiKareGo2.woff2") format("woff2");
+}
+/* Fallbacks, one face each (a face only ever uses the first local font it
+   finds), shrunk to sit on the bitmap fonts' lines. */
+@font-face {
+  font-family: "System 7 CJK";
+  src: local("PingFangSC-Regular");
+  size-adjust: 72%;
+}
+@font-face {
+  font-family: "System 7 CJK Bold";
+  src: local("PingFangSC-Semibold");
+  size-adjust: 78%;
+}
+@font-face {
+  font-family: "System 7 Emoji";
+  src: local("AppleColorEmoji");
+  size-adjust: 68%;
+}
+
+[data-theme="system7"] {
+  --font: 16px/12px "Geneva 9", "System 7 CJK", "System 7 Emoji", sans-serif;
+  --system-font: 16px/16px "Chicago 12", "System 7 CJK Bold", "System 7 Emoji", sans-serif;
+  --ink: #000;
+  --hint: #808080;
+  --rule: #000;
+  --error: #000;
+  --radius: 6;
+  --tail-shape: corner;
+  --shadow-blur: 0;
+}
+[data-theme="system7"] #shape .fill { fill: #fff; }
+[data-theme="system7"] #shape .rim { stroke: #000; }
+[data-theme="system7"] #shape .shadow-hard { fill: #000; transform: translate(1px, 1px); }
+
+[data-theme="system7"] ::selection { background: #000; color: #fff; }
+
+[data-theme="system7"] #msg { padding: 8px 10px 7px; }
+/* Scroll bar: grey (50% dither) track, white box. */
+[data-theme="system7"] #msg::-webkit-scrollbar { width: 16px; }
+[data-theme="system7"] #msg::-webkit-scrollbar-track {
+  background: repeating-conic-gradient(#000 0 25%, #fff 0 50%) 0 0 / 2px 2px;
+  border-left: 1px solid #000;
+  margin-top: 6px; /* clear of the rounded corner */
+}
+[data-theme="system7"] #msg::-webkit-scrollbar-thumb { background: #fff; border: 1px solid #000; }
+
+[data-theme="system7"] #ask { gap: 10px; padding: 8px 12px 10px 10px; }
+
+[data-theme="system7"] #input {
+  height: 22px;
+  border: 1px solid #000;
+  background: #fff;
+  padding: 0 3px;
+  font: var(--system-font);
+}
+
+/* Push button: 20 high, rounded black frame; as the default button, a
+   3-pixel outline one pixel outside it. */
+[data-theme="system7"] #send {
+  width: auto;
+  min-width: 59px;
+  height: 20px;
+  padding: 0 10px;
+  border: 1px solid #000;
+  border-radius: 5px;
+  background: #fff;
+  color: #000;
+  font: var(--system-font);
+  box-shadow: 0 0 0 1px #fff, 0 0 0 4px #000;
+}
+[data-theme="system7"] .send-icon { display: none; }
+[data-theme="system7"] .send-label { display: block; }
+/* Dimmed controls were drawn in grey. */
+[data-theme="system7"] #send:disabled { border-color: #808080; color: #808080; box-shadow: 0 0 0 1px #fff, 0 0 0 4px #808080; }
+[data-theme="system7"] #send:not(:disabled):active { background: #000; color: #fff; }

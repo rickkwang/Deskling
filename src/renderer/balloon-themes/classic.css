@@ -1,0 +1,26 @@
+/* Classic: the original balloon, a pale yellow note with a dark outline. */
+[data-theme="classic"] {
+  --font: 12px/1.42 Geneva, "Lucida Grande", "PingFang SC", -apple-system, sans-serif;
+  --paper: #fbefc2;
+  --ink: #1f1d17;
+  --edge: #2e2b22;
+  --rule: #ddd0a0;
+  --hint: #9b937a;
+  --error: #6b2b12;
+  --radius: 9;
+  --tail-shape: straight;
+  --shadow-blur: 3;
+}
+[data-theme="classic"] #shape .fill { fill: var(--paper); }
+[data-theme="classic"] #shape .rim { stroke: var(--edge); }
+[data-theme="classic"] #shape .shadow-hard { fill: rgba(0, 0, 0, 0.16); transform: translate(1.5px, 2px); }
+[data-theme="classic"] #shape .shadow-soft { fill: rgba(0, 0, 0, 0.14); transform: translate(0, 3px); }
+
+[data-theme="classic"] #send {
+  border-radius: 50%;
+  background: rgba(60, 50, 20, 0.07);
+  color: rgba(60, 50, 20, 0.32);
+  transition: background 120ms, color 120ms;
+}
+[data-theme="classic"] #send:not(:disabled) { background: var(--edge); color: var(--paper); }
+[data-theme="classic"] #send:not(:disabled):active { transform: translateY(1px); }

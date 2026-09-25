@@ -31,9 +31,23 @@ let settings = {
   // Screen point where the pet's feet stand (the window is laid out around it).
   petX: null, petY: null,
   scale: 1,
+  balloon: 'classic', // speech balloon theme (BALLOON_THEMES)
   // Behavior (Assistant Settings)
   enabled: true, greeting: true, speech: false, responseStyle: 'normal', instructions: '',
 };
+// Speech balloon looks: src/renderer/balloon-themes/<id>.css. `tail` is how
+// far the tail tip reaches beyond the box (it sets where the window goes);
+// `corner` tails grow out of a corner, like System 7 Balloon Help, so the
+// balloon is placed with that corner at the pet.
+const BALLOON_THEMES = {
+  classic: { label: 'Classic', tail: 7 },
+  aqua: { label: 'Aqua', tail: 7 },
+  macos: { label: 'macOS', tail: 12 }, // NSPopover's arrow on macOS 26
+  win98: { label: 'Windows 98', tail: 7 },
+  system7: { label: 'System 7', tail: 12, corner: true },
+};
+const balloonTheme = () => BALLOON_THEMES[settings.balloon];
+
 // Earlier names of the app, newest first: carry their data over once.
 const OLD_NAMES = ['It Looks Like', 'ai-desk-pet'];
 function migrateUserData() {
@@ -57,6 +71,7 @@ function loadSettings() {
   }
   delete settings.x;
   delete settings.y;
+  if (!(settings.balloon in BALLOON_THEMES)) settings.balloon = 'classic';
 }
 function saveSettings() {
   if (SELFTEST || SETTINGS_PREVIEW) return;
@@ -198,9 +213,10 @@ function createWindow() {
 // side of the pet.
 
 const BALLOON_W = 264; // balloon box width (bubble.css)
-const BALLOON_MARGIN = 10; // band around the box in its window (shadow + tail)
+const BALLOON_MARGIN = 14; // band around the box in its window (shadow + tail; bubble.css)
 const EDGE_GAP = 12; // breathing room between the balloon and the screen edge
-const TAIL_GAP = 2; // tail tip to the pet's feet (below) or head (above)
+const TIP_GAP = 8; // tail tip to the pet's feet (below) or head (above)
+const CORNER_TIP = 2; // a corner tail's tip, in from the balloon's side
 // The balloon window stays on screen once created; showing and hiding the
 // balloon are CSS transitions inside it (bubble.css), with clicks passing
 // through while it is hidden. Ordering a window in and out makes macOS drop
@@ -233,9 +249,14 @@ function createBubbleWindow() {
   bubbleWin.loadFile(path.join(ROOT, 'src/renderer/bubble.html'));
   // Content sent before the page loaded would be lost: replay the latest.
   bubbleWin.webContents.on('did-finish-load', () => {
+    sendBalloonTheme();
     if (balloon.content) bubbleWin.webContents.send('bubble:content', balloon.content);
     if (balloon.visible) showBalloon();
   });
+}
+
+function sendBalloonTheme() {
+  bubbleWin?.webContents.send('bubble:theme', { id: settings.balloon, tail: balloonTheme().tail });
 }
 
 // Below the pet if it fits, else above; slid sideways to keep EDGE_GAP from
@@ -248,17 +269,23 @@ function placeBalloon() {
   const petTop = fy - petBox.h;
   const { workArea: a } = screen.getDisplayNearestPoint({ x: fx, y: fy });
   const bh = balloon.h;
-  const tail = 2 * 7 + 1; // tail height (bubble.css --tail) plus overlap
-  const belowTop = fy + TAIL_GAP + tail - 2;
-  const aboveTop = petTop - TAIL_GAP - tail + 2 - bh;
+  const { tail, corner } = balloonTheme();
+  const belowTop = fy + TIP_GAP + tail;
+  const aboveTop = petTop - TIP_GAP - tail - bh;
   const fitsBelow = belowTop + bh + EDGE_GAP <= a.y + a.height;
   const fitsAbove = aboveTop - EDGE_GAP >= a.y;
   const side = fitsBelow ? 'below' : fitsAbove ? 'above' : (a.y + a.height - fy >= petTop - a.y ? 'below' : 'above');
   const boxTop = side === 'below' ? belowTop : aboveTop;
-  // Prefer the pet near the balloon's right end, like the classic assistant.
-  const preferredLeft = fx - (BALLOON_W - 50);
-  const boxLeft = clamp(preferredLeft, a.x + EDGE_GAP, a.x + a.width - EDGE_GAP - BALLOON_W);
-  const tailLeft = clamp(fx - boxLeft, 20, BALLOON_W - 20);
+  // Prefer the pet near the balloon's right end, like the classic assistant;
+  // a corner tail sits at the right corner, or the left one if that is
+  // cut off by the screen edge.
+  const minLeft = a.x + EDGE_GAP;
+  const maxLeft = a.x + a.width - EDGE_GAP - BALLOON_W;
+  const rightEnd = fx - (BALLOON_W - (corner ? CORNER_TIP : 50));
+  const preferredLeft = corner && rightEnd < minLeft ? fx - CORNER_TIP : rightEnd;
+  const boxLeft = clamp(preferredLeft, minLeft, maxLeft);
+  const inset = corner ? CORNER_TIP : 20;
+  const tailLeft = clamp(fx - boxLeft, inset, BALLOON_W - inset);
   balloon.side = side;
   bubbleWin.setBounds({
     x: Math.round(boxLeft - BALLOON_MARGIN),
@@ -361,12 +388,17 @@ function switchCharacter(id) {
 // Applies a partial settings change from any UI, persists and broadcasts it.
 function updateSettings(patch) {
   if (patch.scale !== undefined) patch.scale = Math.min(2, Math.max(0.5, Number(patch.scale) || 1));
+  if (patch.balloon !== undefined && !(patch.balloon in BALLOON_THEMES)) delete patch.balloon;
   const prev = { ...settings };
   if (patch.character && patch.character !== prev.character) switchCharacter(patch.character);
   Object.assign(settings, patch);
   if (patch.model !== undefined) assistant.setModel(settings.model);
   if (patch.responseStyle !== undefined || patch.instructions !== undefined) {
     assistant.setBehavior({ responseStyle: settings.responseStyle, instructions: settings.instructions });
+  }
+  if (patch.balloon !== undefined && patch.balloon !== prev.balloon) {
+    sendBalloonTheme();
+    if (balloon.shown) { balloon.placed = ''; placeBalloon(); } // the tail changed
   }
   if (patch.enabled !== undefined && patch.enabled !== prev.enabled) {
     if (settings.enabled) showPet(); else hidePet();
@@ -576,6 +608,7 @@ function registerIpc() {
     characters: listCharacters().map(characterCard),
     ai: await assistant.refresh(settings.model),
     styles: RESPONSE_STYLES,
+    balloons: Object.fromEntries(Object.entries(BALLOON_THEMES).map(([id, t]) => [id, t.label])),
   }));
   ipcMain.on('settings:set', (_e, patch) => updateSettings(patch));
   ipcMain.on('settings:fit', (_e, { height, extra }) => {
@@ -649,6 +682,7 @@ app.whenReady().then(() => {
   // Selftest can target one character without touching saved settings.
   if (SELFTEST && arg('character')) settings.character = arg('character');
   if (SELFTEST && arg('scale')) settings.scale = Number(arg('scale'));
+  if (SELFTEST && arg('balloon') in BALLOON_THEMES) settings.balloon = arg('balloon');
   if (SELFTEST) {
     // Keep test windows away from the real pet so they never overlap it.
     const { workArea } = screen.getPrimaryDisplay();

@@ -1,0 +1,112 @@
+/* Aqua glass: a translucent aqua-tinted pane with a gel highlight floating
+   inside the rim, a caustic glow pooling at the bottom and a blue rim lit
+   from inside. The controls follow the Aqua Human Interface Guidelines
+   (Apple, June 2002): 13-point Lucida Grande, a square text field with a
+   3-pixel inner shadow and a blue focus ring, and a 20-pixel capsule push
+   button that is clear, or blue and pulsing when it is the default. */
+[data-theme="aqua"] {
+  --font: 13px/1.38 "Lucida Grande", "PingFang SC", -apple-system, sans-serif;
+  --ink: #000;
+  --rule: rgba(40, 90, 160, 0.22);
+  --hint: #8e8e8e;
+  --error: #a31b1b;
+  --radius: 10;
+  --tail-shape: straight;
+  --shadow-blur: 2.5;
+}
+[data-theme="aqua"] #shape .fill { fill: url(#glass-fill); }
+[data-theme="aqua"] #shape .fill-top { stop-color: rgba(236, 246, 255, 0.88); }
+[data-theme="aqua"] #shape .fill-mid { stop-color: rgba(228, 243, 255, 0.84); }
+[data-theme="aqua"] #shape .fill-bottom { stop-color: rgba(196, 226, 252, 0.9); }
+[data-theme="aqua"] #shape .glass { display: inline; }
+[data-theme="aqua"] #shape .glow { fill: url(#glass-glow); }
+[data-theme="aqua"] #shape .glow-in { stop-color: rgba(120, 220, 255, 0.75); }
+[data-theme="aqua"] #shape .glow-out { stop-color: rgba(140, 225, 255, 0); }
+[data-theme="aqua"] #shape .sheen { fill: url(#glass-sheen); }
+[data-theme="aqua"] #shape .sheen-top { stop-color: rgba(255, 255, 255, 0.95); }
+[data-theme="aqua"] #shape .sheen-bottom { stop-color: rgba(255, 255, 255, 0.25); }
+/* Stroked twice as wide and clipped to the shape: only the inner half shows. */
+[data-theme="aqua"] #shape .inner-rim { fill: none; stroke: rgba(255, 255, 255, 0.85); stroke-width: 2; }
+[data-theme="aqua"] #shape .rim { stroke: rgba(35, 85, 160, 0.62); }
+/* Only outside the glass (masked), or it would muddy the tint. */
+[data-theme="aqua"] #shape .shadow-soft { fill: rgba(0, 35, 90, 0.34); transform: translate(0, 2.5px); }
+
+[data-theme="aqua"] ::selection { background: #b5d5ff; } /* Aqua highlight */
+
+/* Aqua scroller: a blue gel pill. */
+[data-theme="aqua"] #msg::-webkit-scrollbar { width: 9px; }
+[data-theme="aqua"] #msg::-webkit-scrollbar-track { background: transparent; }
+[data-theme="aqua"] #msg::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 5px;
+  background: linear-gradient(90deg, #8fc2f7, #3d8ae6 55%, #6fb0f5) padding-box;
+}
+
+[data-theme="aqua"] #ask {
+  gap: 10px;
+  padding: 8px 10px 10px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8); /* etched groove */
+}
+
+/* Text input field (HIG fig. 7-30): 22 high, grey frame darkest on top,
+   and a 3-pixel shadow inside. Colours sampled from the figure. */
+[data-theme="aqua"] #input {
+  height: 22px;
+  border: 1px solid #b9b9b9;
+  border-top-color: #7c7c7c;
+  border-bottom-color: #cfcfcf;
+  background: #fff;
+  box-shadow: inset 0 1px #c3c3c3, inset 0 2px #f0f0f0, inset 1px 0 #e3e3e3, inset -1px 0 #e3e3e3;
+  padding: 0 4px;
+}
+/* Focus (HIG fig. 9-1): the frame turns blue inside a 3-pixel glow. */
+[data-theme="aqua"] #input:focus {
+  border-color: #7fa7ce;
+  box-shadow:
+    inset 0 1px #c3c3c3, inset 0 2px #f0f0f0,
+    0 0 0 1px #96bce0, 0 0 0 2px #b3cfe8, 0 0 0 3px #d3e2f2;
+}
+
+/* Push button (HIG fig. 7-3): 20 high plus shadow, 14-pixel end caps. */
+[data-theme="aqua"] #send {
+  position: relative;
+  overflow: hidden;
+  width: auto;
+  height: 20px;
+  padding: 0 14px;
+  border: 1px solid #7c7d80;
+  border-bottom-color: #8d8f92;
+  border-radius: 10px;
+  font: inherit;
+  color: #000;
+  /* Clear: grey gloss on top, white glow at the bottom (sampled, fig. 7-1). */
+  background: linear-gradient(#afb5bb, #dadce1 25%, #e2e4e8 45%, #d4d5da 55%, #ededf1 78%, #fefefe);
+  box-shadow: 0 1px 1.5px rgba(0, 0, 0, 0.25);
+}
+[data-theme="aqua"] .send-icon { display: none; }
+[data-theme="aqua"] .send-label { display: block; position: relative; } /* above the pulse */
+[data-theme="aqua"] #send:disabled { color: rgba(0, 0, 0, 0.35); }
+
+/* Default: blue, and pulsing (HIG: "uses color and pulses"). The pulse
+   fades a paler blue in and out over the saturated one. */
+[data-theme="aqua"] #send:not(:disabled) {
+  border-color: #2c5b99;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.2)) 7px 2px / calc(100% - 14px) 7px no-repeat,
+    linear-gradient(#5e9ae6, #8ebbf0 25%, #6da6ec 45%, #3c87e0 55%, #65acf0 78%, #a6dcfb);
+}
+[data-theme="aqua"] #send:not(:disabled)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(#6f99d1, #aecce8 25%, #b7d2ea 45%, #93bce0 55%, #b3d8f3 78%, #d1edf7);
+  animation: aqua-pulse 1.8s ease-in-out infinite alternate;
+}
+@keyframes aqua-pulse {
+  from { opacity: 0; }
+  to { opacity: 0.75; }
+}
+[data-theme="aqua"] #send:not(:disabled):active {
+  background: linear-gradient(#2f6fc4, #5b93dc 25%, #3a7bd0 45%, #1d5fb8 55%, #3c83d4 78%, #74b6ee);
+}
+[data-theme="aqua"] #send:not(:disabled):active::before { animation: none; opacity: 0; }
