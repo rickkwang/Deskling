@@ -34,7 +34,7 @@ npx electron . --selftest --edge --hold=60000 --timer-demo=60   # QA: start the 
 
 ## Menus and settings
 
-- Right-click or long-press the pet: **Speech** (read replies aloud), **Character ▸**, **Focus Timer ▸**, **New Conversation**, **Assistant Settings…**, **Quit Assistant**. The tray menu has **Focus Timer ▸** too.
+- Right-click or long-press the pet: **Speech** (read replies aloud), **Character ▸**, **Focus Timer ▸**, **New Conversation**, **Assistant Settings…**, **About Deskling** (version), **Check for Updates…** (or **Update to …** once one is out), **Quit Assistant**. The tray menu has **Focus Timer ▸**, About and the update item too.
 - **Focus Timer** (Pomodoro): a focus session, then a break that starts on its own; after the break it waits for you to start the next round. A pill above the pet's head counts down in the balloon style (click it to pause, resume or start the next round). When a phase ends it plays the chosen sound and the character says a line written by the model, or a preset one from its `persona.timer` when the model is unavailable; with the pet hidden, a system notification does instead.
 - **Assistant Settings** has two tabs:
   - **Character**: the Desktop Assistant on/off switch, the character grid, Size, and the speech Balloon style (Classic, Aqua, macOS, Windows 98, System 7).
