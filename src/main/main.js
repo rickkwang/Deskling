@@ -24,6 +24,9 @@ const SETTINGS_PREVIEW = arg('settings-preview');
 const TIMER_DEMO = Number(arg('timer-demo')) || 0;
 // QA: electron . --audit  (sprite/animation visibility audit for every character)
 const AUDIT = process.argv.includes('--audit');
+// QA captures: in the project, or beside the settings in a packaged app (its
+// own files are read-only).
+const qaDir = (...parts) => path.join(app.isPackaged ? app.getPath('userData') : ROOT, 'qa', ...parts);
 const WIN_W = 340;
 const WIN_H = 600;
 
@@ -380,7 +383,7 @@ function createPreviewWindow() {
     win.webContents.once('did-finish-load', async () => {
       await new Promise((r) => setTimeout(r, 1500));
       const img = await win.webContents.capturePage();
-      const dir = path.join(ROOT, 'qa');
+      const dir = qaDir();
       fs.mkdirSync(dir, { recursive: true });
       const file = path.join(dir, `preview-${arg('preview') || settings.character}.png`);
       fs.writeFileSync(file, img.toPNG());
@@ -424,7 +427,7 @@ function readImage(file) {
     // HEIC, WebP, TIFF…: macOS's own converter reads them.
     const tmp = path.join(app.getPath('temp'), `deskling-sheet-${process.pid}.png`);
     try {
-      execFileSync('sips', ['-s', 'format', 'png', file, '--out', tmp], { stdio: 'ignore' });
+      execFileSync('/usr/bin/sips', ['-s', 'format', 'png', file, '--out', tmp], { stdio: 'ignore' });
       img = nativeImage.createFromPath(tmp);
     } catch { /* not an image */ } finally {
       fs.rmSync(tmp, { force: true });
@@ -622,8 +625,8 @@ function openSettings(tab) {
       console.log(`[settings-preview] bounds ${b.x},${b.y},${b.width},${b.height}`);
       await new Promise((r) => setTimeout(r, 1500)); // time for an OS-level screenshot
       const img = await settingsWin.webContents.capturePage();
-      fs.mkdirSync(path.join(ROOT, 'qa'), { recursive: true });
-      fs.writeFileSync(path.join(ROOT, 'qa', `settings-${SETTINGS_PREVIEW}.png`), img.toPNG());
+      fs.mkdirSync(qaDir(), { recursive: true });
+      fs.writeFileSync(qaDir(`settings-${SETTINGS_PREVIEW}.png`), img.toPNG());
       app.exit(0);
     });
   }
@@ -1005,7 +1008,7 @@ function registerIpc() {
   ipcMain.on('selftest:log', (_e, line) => console.log(`[selftest] ${line}`));
   ipcMain.handle('selftest:capture', async (_e, name) => {
     const img = await win.webContents.capturePage();
-    const dir = path.join(ROOT, 'qa', settings.character);
+    const dir = qaDir(settings.character);
     fs.mkdirSync(dir, { recursive: true });
     const file = path.join(dir, `${name}.png`);
     fs.writeFileSync(file, img.toPNG());
