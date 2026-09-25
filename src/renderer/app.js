@@ -361,7 +361,12 @@ window.pet.onUpdateAvailable((version) => {
   announceUpdate();
 });
 window.pet.onUpdateStatus(({ state, version, error }) => {
-  if (state === 'downloading') announce(`Downloading Deskling ${version}… I'll restart when it's ready.`);
+  if (state === 'available') {
+    pendingUpdate = null;
+    if (announce(`Deskling ${version} is out! Right-click me and choose “Update to ${version}…” — I'll be back in a few seconds.`)) window.pet.updateSeen(version);
+  } else if (state === 'current') announce(`You're on the latest version, Deskling ${version}.`);
+  else if (state === 'check-failed') announce(`I couldn't check for updates: ${error}`, { error: true });
+  else if (state === 'downloading') announce(`Downloading Deskling ${version}… I'll restart when it's ready.`);
   else if (state === 'failed') announce(`The update didn't work: ${error} I've opened the download page instead.`, { error: true });
 });
 

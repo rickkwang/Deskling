@@ -506,7 +506,8 @@ function buildContextMenu() {
     { type: 'separator' },
     { label: 'New Conversation', click: () => { assistant.reset(); win.webContents.send('chat:reset'); } },
     { label: 'Assistant Settings…', click: () => openSettings() },
-    ...updateMenu(),
+    { type: 'separator' },
+    ...appMenu(),
     { type: 'separator' },
     { label: 'Quit Assistant', click: () => app.quit() },
   ]);
@@ -520,7 +521,8 @@ function updateTray() {
     { label: 'Desktop Assistant', type: 'checkbox', checked: settings.enabled, click: (item) => updateSettings({ enabled: item.checked }) },
     { label: 'Focus Timer', submenu: timerMenu() },
     { label: 'Assistant Settings…', click: () => openSettings() },
-    ...updateMenu(),
+    { type: 'separator' },
+    ...appMenu(),
     { type: 'separator' },
     { label: 'Quit Assistant', click: () => app.quit() },
   ]));
@@ -661,10 +663,41 @@ async function installUpdate() {
   }
 }
 
-function updateMenu() {
-  if (!update.feed) return [];
-  const { version } = update.feed;
-  return [{ label: update.installing ? `Updating to ${version}…` : `Update to ${version}…`, enabled: !update.installing, click: installUpdate }];
+// "Check for Updates…" from a menu: always answers, in the balloon or (pet
+// hidden) a notification.
+async function checkUpdatesNow() {
+  let reply;
+  try {
+    const feed = await checkForUpdate(app.getVersion());
+    if (feed) {
+      update.feed = feed;
+      updateTray();
+      reply = { state: 'available', version: feed.version };
+    } else {
+      reply = { state: 'current', version: app.getVersion() };
+    }
+  } catch (e) {
+    reply = { state: 'check-failed', error: e.message };
+  }
+  if (win?.isVisible()) return win.webContents.send('update:status', reply);
+  const body = { available: `Deskling ${reply.version} is out. Choose “Update to ${reply.version}…” from this menu.`, current: `You're on the latest version (${reply.version}).`, 'check-failed': `Couldn't check for updates: ${reply.error}` }[reply.state];
+  if (Notification.isSupported()) new Notification({ title: 'Deskling', body }).show();
+}
+
+function showAbout() {
+  app.focus({ steal: true });
+  app.showAboutPanel();
+}
+
+// About, and the update item: "Update to x…" once a newer release is known.
+function appMenu() {
+  const { version } = update.feed || {};
+  return [
+    { label: 'About Deskling', click: showAbout },
+    version
+      ? { label: update.installing ? `Updating to ${version}…` : `Update to ${version}…`, enabled: !update.installing, click: installUpdate }
+      : { label: 'Check for Updates…', click: checkUpdatesNow },
+  ];
 }
 
 // ---- IPC ------------------------------------------------------------------
@@ -839,6 +872,13 @@ app.on('second-instance', () => updateSettings({ enabled: true }));
 app.whenReady().then(() => {
   migrateUserData();
   loadSettings();
+  app.setAboutPanelOptions({
+    applicationName: 'Deskling',
+    applicationVersion: app.getVersion(),
+    version: '',
+    credits: 'A little creature that lives on your desktop.\nCharacters from Microsoft Agent; a local Ollama model does the talking.',
+    copyright: '© 2026 Myrick',
+  });
   // Selftest can target one character without touching saved settings.
   if (SELFTEST && arg('character')) settings.character = arg('character');
   if (SELFTEST && arg('scale')) settings.scale = Number(arg('scale'));
