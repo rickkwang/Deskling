@@ -319,7 +319,7 @@ window.pet.onCharacter(async (next) => {
   if (busy) window.pet.cancel();
   cancelSpeech();
   hideBubble();
-  await runtime.act('goodbye');
+  await runtime.leave();
   mountCharacter(next);
   // Office: Greeting plays "when the character is chosen".
   await runtime.show({ greet: true });
@@ -342,8 +342,8 @@ document.body.dataset.theme = settings.balloon;
 mountCharacter(init.character);
 renderTimer(await window.pet.timer.status());
 log(`ai: ${init.ai.available ? `ollama ok, local models [${init.ai.models.join(', ')}], using ${init.ai.model}` : `unavailable (${init.ai.error})`}`);
-// Greeting setting: "Say hello when the assistant opens" (Greeting animation +
-// balloon); otherwise just the plain Show animation.
+// Greeting setting: "Say hello when the assistant opens" (the hello gesture
+// and balloon). Office characters' entrance is their Greeting either way.
 const greeted = runtime.show({ greet: settings.greeting });
 if (!init.ai.model) {
   say(init.ai.available ? ERRORS.NO_LOCAL_MODEL : ERRORS.OLLAMA_UNAVAILABLE, { error: true });

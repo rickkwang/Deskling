@@ -46,6 +46,8 @@ The character must map the states `idle listening thinking speaking confused ack
 (each tagged `official` or `app-mapped`) and have a `persona` with a `systemPrompt` and a list of `greetings`
 (one is picked at random whenever the character says hello). Optionally, `persona.timer.focusDone` and
 `persona.timer.breakDone` list the lines it says when a focus session or a break ends and the model cannot write one.
+With `"animationSet": "office"` the character enters with its `greeting` and leaves with its `goodbye` (as the Office
+assistants do); otherwise it enters with `show`, then `greeting` to say hello, and leaves with `hide`.
 
 ## Characters and credits
 

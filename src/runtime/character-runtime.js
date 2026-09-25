@@ -127,8 +127,24 @@ export class CharacterRuntime extends EventTarget {
     return this.play(this._pick(def.animations), { kind: action });
   }
 
+  // Entrances and exits, as ryOS plays them. The Office Animation Set's
+  // Greeting and Goodbye are the full entrance and exit ("when the character
+  // is chosen" / "another character is chosen"), and its Show and Hide are a
+  // few frames that pop. Agent and XP characters appear with Show, say hello
+  // with a separate Greet, and leave with Hide.
+  get _office() {
+    return this.c.animationSet === 'office';
+  }
+
+  // The exit animation (hiding, or before another character takes over). It
+  // ends an entrance in progress, which must not go on to its hello.
+  leave() {
+    this.entrance = null;
+    return this.act(this._office && this.c.states.goodbye ? 'goodbye' : 'hide');
+  }
+
   async hide() {
-    await this.act('hide');
+    await this.leave();
     this.setState('hidden');
   }
 
@@ -137,8 +153,13 @@ export class CharacterRuntime extends EventTarget {
     this.state = 'idle';
     this.idleSince = Date.now();
     if (from !== 'idle') this._emit('state', { from, to: 'idle' });
-    const action = greet && this.c.states.greeting ? 'greeting' : 'show';
-    await this.act(action);
+    if (this._office && this.c.states.greeting) {
+      await this.act('greeting');
+      return;
+    }
+    const entrance = (this.entrance = {});
+    await this.act('show');
+    if (greet && this.c.states.greeting && this.entrance === entrance && !this.destroyed) await this.act('greeting');
   }
 
   _playState(state) {

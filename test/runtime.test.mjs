@@ -189,3 +189,51 @@ test('a Return keeps its pace unless something is waiting on it', async () => {
   // 50 ms in, 1.2 s of path is left: squeezed into the 1 s budget.
   assert.ok(hurried < 1300, `interrupted: hurried (${hurried} ms)`);
 });
+
+// Entrances and exits as ryOS plays them: Office characters come and go with
+// Greeting / Goodbye (their Show and Hide are a few frames that pop); Agent
+// and XP characters appear with Show (then Greet to say hello) and leave with Hide.
+function fastCharacter(id) {
+  const c = JSON.parse(fs.readFileSync(`characters/${id}/character.json`, 'utf8'));
+  for (const a of Object.values(c.animations)) for (const f of a.frames) f.duration = Math.ceil(f.duration / 50);
+  return c;
+}
+async function played(id, run) {
+  const rt = new CharacterRuntime(el(), fastCharacter(id), 'x.png');
+  rt.state = 'hidden';
+  const names = [];
+  rt.addEventListener('animation', (e) => names.push(e.detail.name));
+  await run(rt);
+  rt.destroy();
+  return names.filter((n) => n !== 'RestPose' && !n.startsWith('Idle'));
+}
+
+test('Agent and XP characters appear with Show, then Greet when saying hello', async () => {
+  assert.deepEqual(await played('rover', (rt) => rt.show({ greet: true })), ['Show', 'Greet']);
+  assert.deepEqual(await played('rover', (rt) => rt.show()), ['Show']);
+  assert.deepEqual(await played('genie', (rt) => rt.show({ greet: true })), ['Show', 'Greet']);
+});
+
+test('Office characters always enter with their full Greeting, never the Show pop', async () => {
+  assert.deepEqual(await played('clippy', (rt) => rt.show({ greet: true })), ['Greeting']);
+  assert.deepEqual(await played('clippy', (rt) => rt.show()), ['Greeting']);
+});
+
+test('characters leave with Goodbye (Office) or Hide (Agent, XP)', async () => {
+  const leave = (rt) => { rt.state = 'idle'; return rt.hide(); };
+  assert.deepEqual(await played('clippy', leave), ['GoodBye']);
+  assert.deepEqual(await played('f1', leave), ['Goodbye']);
+  assert.deepEqual(await played('genie', leave), ['Hide']);
+  assert.deepEqual(await played('rover', leave), ['Hide']);
+  assert.deepEqual(await played('genie', (rt) => { rt.state = 'idle'; return rt.leave?.(); }), ['Hide'], 'switching characters leaves the same way');
+});
+
+test('leaving during an entrance does not go on to the hello', async () => {
+  const names = await played('rover', async (rt) => {
+    const entering = rt.show({ greet: true });
+    await wait(5);
+    await rt.hide();
+    await entering;
+  });
+  assert.deepEqual(names, ['Show', 'Hide']);
+});
