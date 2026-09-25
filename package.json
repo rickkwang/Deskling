@@ -22,7 +22,8 @@
     "appId": "com.rickkwang.deskling",
     "productName": "Deskling",
     "directories": {
-      "output": "release"
+      "output": "release",
+      "buildResources": "build"
     },
     "files": [
       "src/**/*",
@@ -49,7 +50,8 @@
       "hardenedRuntime": false,
       "extendInfo": {
         "LSUIElement": true
-      }
+      },
+      "icon": "build/icon.icns"
     },
     "dmg": {
       "title": "Deskling"
