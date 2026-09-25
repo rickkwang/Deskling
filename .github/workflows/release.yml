@@ -28,11 +28,15 @@ jobs:
           [ "$GITHUB_REF_NAME" = "v$VERSION" ] || { echo "Tag $GITHUB_REF_NAME != v$VERSION" >&2; exit 1; }
       - run: npm run dist
       - run: codesign --verify --deep --strict release/mac-arm64/Deskling.app
+      # Assets go up on a draft, which the updater's releases/latest never
+      # sees, and the release is published once all are there. Re-runnable.
       - name: Publish
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          gh release create "v$VERSION" --title "Deskling $VERSION" --notes-file .github/release-notes.md --verify-tag
-          gh release upload "v$VERSION" \
+          gh release view "v$VERSION" >/dev/null 2>&1 ||
+            gh release create "v$VERSION" --draft --title "Deskling $VERSION" --notes-file .github/release-notes.md --verify-tag
+          gh release upload "v$VERSION" --clobber \
             "release/Deskling-$VERSION-arm64.dmg" \
             "release/Deskling-$VERSION-arm64-mac.zip" \
             release/latest-mac.yml
+          gh release edit "v$VERSION" --draft=false --latest

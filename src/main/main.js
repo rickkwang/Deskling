@@ -623,7 +623,8 @@ function timerMenu() {
 
 // ---- updates --------------------------------------------------------------
 // Packaged builds look for a newer GitHub release at launch and once a day.
-// The pet mentions a new version once; installing is the menu item's job.
+// The pet mentions a new version once, when it can (it reports back); until
+// then every check offers it again. Installing is the menu item's job.
 
 const UPDATE_EVERY = 24 * 60 * 60 * 1000;
 const update = { feed: null, installing: false };
@@ -631,13 +632,12 @@ const update = { feed: null, installing: false };
 async function checkUpdates() {
   try {
     const feed = await checkForUpdate(app.getVersion());
-    if (!feed || feed.version === update.feed?.version) return;
-    update.feed = feed;
-    updateTray();
-    if (settings.updateSeen !== feed.version && win?.isVisible()) {
-      win.webContents.send('update:available', feed.version);
-      updateSettings({ updateSeen: feed.version });
+    if (!feed) return;
+    if (feed.version !== update.feed?.version) {
+      update.feed = feed;
+      updateTray();
     }
+    if (settings.updateSeen !== feed.version) win?.webContents.send('update:available', feed.version);
   } catch (e) {
     console.warn(`[update] ${e.message}`);
   }
@@ -802,6 +802,7 @@ function registerIpc() {
     }
   });
   ipcMain.on('ai:cancel', () => assistant.cancel());
+  ipcMain.on('update:seen', (_e, version) => updateSettings({ updateSeen: version }));
   ipcMain.on('timer:action', (_e, action) => timerAction(action));
   ipcMain.handle('timer:remark', (_e, info) => timerRemark(info));
   ipcMain.handle('timer:status', () => timer.status());

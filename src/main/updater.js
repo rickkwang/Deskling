@@ -133,10 +133,13 @@ echo "[deskling-update] installed"
 // Resolves once the script is waiting: the caller must quit the app.
 export async function prepareInstall(feed, { exe, name }) {
   const target = installTarget(exe, name);
+  const dir = path.dirname(target);
   try {
-    fs.accessSync(path.dirname(target), fs.constants.W_OK);
+    fs.accessSync(dir, fs.constants.W_OK);
   } catch {
-    throw new Error(`I can't update myself inside ${path.dirname(target)}. Move ${name} to Applications first.`);
+    throw new Error(dir === '/Applications'
+      ? `This account can't change apps in Applications, so ask an administrator to install it.`
+      : `I can't update myself inside ${dir}. Move ${name} to Applications first.`);
   }
   const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'deskling-update-'));
   try {

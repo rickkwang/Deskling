@@ -301,7 +301,11 @@ async function hidePet() {
   window.pet.hideWindow();
 }
 
-window.pet.onVisibility((v) => (v === 'hide' ? hidePet() : runtime.show()));
+window.pet.onVisibility(async (v) => {
+  if (v === 'hide') return hidePet();
+  await runtime.show();
+  announceUpdate();
+});
 window.pet.onSettings((next) => {
   const rescale = next.scale !== settings.scale;
   settings = next;
@@ -328,19 +332,33 @@ window.pet.onCharacter(async (next) => {
 });
 
 // ---- updates ----------------------------------------------------------------
-// Main finds new versions; the pet mentions one (unless it is busy talking)
-// and reports on an install started from the menu.
+// Main finds new versions; the pet mentions one when it is free (shown, not
+// talking, nothing but its greeting in the balloon) and tells main it did;
+// main offers it again at the next check. It also reports on an install
+// started from the menu.
+
+let pendingUpdate = null;
 
 function announce(text, { error = false } = {}) {
-  if (busy) return;
+  if (busy) return false;
   say(text, { error });
   runtime.setState('idle');
   runtime.act(error ? 'confused' : 'getAttention');
   openBubble();
+  return true;
+}
+
+function announceUpdate() {
+  const version = pendingUpdate;
+  if (!version || runtime.state === 'hidden' || (balloonOpen && content.text !== lastGreeting)) return;
+  if (!announce(`Deskling ${version} is out! Right-click me and choose “Update to ${version}…” whenever you like — I'll be back in a few seconds.`)) return;
+  pendingUpdate = null;
+  window.pet.updateSeen(version);
 }
 
 window.pet.onUpdateAvailable((version) => {
-  announce(`Deskling ${version} is out! Right-click me and choose “Update to ${version}…” whenever you like — I'll be back in a few seconds.`);
+  pendingUpdate = version;
+  announceUpdate();
 });
 window.pet.onUpdateStatus(({ state, version, error }) => {
   if (state === 'downloading') announce(`Downloading Deskling ${version}… I'll restart when it's ready.`);
