@@ -12,6 +12,7 @@
     "test": "node --test test/*.test.mjs",
     "validate": "node tools/validate-character.mjs",
     "import:clippyjs": "node tools/import-clippyjs.mjs",
+    "import:sheet": "node tools/import-sheet.mjs",
     "dist": "electron-builder --mac dmg zip --arm64 --publish never"
   },
   "devDependencies": {

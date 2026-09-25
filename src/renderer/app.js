@@ -333,6 +333,13 @@ window.pet.onCharacter(async (next) => {
   if (settings.greeting) openBubble();
 });
 
+// Renamed in Settings: same sprites, so nothing is replayed.
+window.pet.onRenamed(({ displayName, persona }) => {
+  character.displayName = displayName;
+  character.persona = persona;
+  petEl.setAttribute('aria-label', displayName);
+});
+
 // ---- updates ----------------------------------------------------------------
 // Main finds new versions; the pet mentions one when it is free (shown, not
 // talking, nothing but its greeting in the balloon) and tells main it did;

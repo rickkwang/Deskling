@@ -216,6 +216,98 @@ body.measuring textarea { flex: none; }
 
 .thumb { width: 52px; height: 48px; }
 
+/* Add a character: a quiet dashed tile after the characters. */
+.add-tile {
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--line-strong);
+  color: var(--muted);
+}
+.add-tile:hover { color: var(--body); border-color: rgba(31, 30, 29, 0.35); background: var(--card); }
+.add-tile .thumb {
+  display: grid;
+  place-items: center;
+  font: 300 26px/1 var(--sans);
+}
+
+/* Naming a new character, or renaming / deleting the selected custom one. */
+.custom {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px 8px 8px;
+  margin-bottom: 12px;
+}
+.custom .thumb {
+  flex: none;
+  display: grid;
+  place-items: end center;
+  padding-bottom: 2px;
+  border-radius: 8px;
+  background: var(--sunk);
+}
+.custom.failed .thumb { display: none; }
+.custom.failed { padding-left: 14px; }
+.custom-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.custom-main small { color: var(--muted); font-size: 11px; line-height: 1.35; padding-left: 7px; }
+.custom.failed .custom-main small { color: var(--clay-deep); padding-left: 0; font-size: 11.5px; }
+.custom-main small.warn { color: var(--clay-deep); }
+.custom.busy .thumb { display: none; }
+.custom.busy { padding-left: 14px; min-height: 66px; }
+.custom.busy .custom-main small { padding-left: 0; font-size: 12px; color: var(--body); }
+
+.name-field {
+  font: 500 13px/1.3 var(--sans);
+  color: var(--ink);
+  width: 100%;
+  padding: 3px 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  user-select: text;
+  -webkit-user-select: text;
+  transition: border-color 120ms, box-shadow 120ms, background 120ms;
+}
+.name-field::placeholder { color: #b0aea5; font-weight: normal; }
+.name-field:hover { border-color: var(--line); }
+.name-field:focus { outline: none; background: var(--card); border-color: var(--clay); box-shadow: 0 0 0 3px var(--clay-wash); }
+/* An empty name (a new character) shows as a field; a set one reads as text. */
+.name-field:placeholder-shown { border-color: var(--line-strong); }
+
+.button {
+  flex: none;
+  font: 500 12px/1 var(--sans);
+  color: var(--ink);
+  padding: 6px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: var(--card);
+  transition: border-color 120ms, background 120ms, color 120ms;
+}
+.button:hover { border-color: rgba(31, 30, 29, 0.35); }
+.button:focus-visible { outline: 2px solid var(--clay); outline-offset: 1px; }
+.button:disabled { color: var(--muted); border-color: var(--line); }
+#custom-primary:not(.danger) { color: #fff; background: var(--clay); border-color: var(--clay-deep); }
+#custom-primary:not(.danger):hover { background: var(--clay-deep); }
+#custom-primary:not(.danger):disabled { background: #e8b7a5; border-color: #e8b7a5; }
+.button.danger { color: var(--clay-deep); }
+.button.danger:hover { background: var(--clay-wash); border-color: var(--clay); }
+
+.make-own { margin: -4px 4px 14px; }
+.link {
+  font: inherit;
+  color: var(--clay-deep);
+  padding: 0;
+  border: 0;
+  background: none;
+  text-decoration: underline;
+  text-decoration-color: rgba(198, 97, 63, 0.35);
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.link:hover { text-decoration-color: currentColor; }
+.link:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; border-radius: 2px; }
+
 /* Trimmed sprite thumbnail (drawn by settings.js). */
 .sprite { display: block; }
 

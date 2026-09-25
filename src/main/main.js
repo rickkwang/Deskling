@@ -1,4 +1,5 @@
-import { app, BrowserWindow, ipcMain, Menu, Notification, Tray, nativeImage, screen, shell } from 'electron';
+import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, Notification, Tray, nativeImage, screen, shell } from 'electron';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -6,6 +7,9 @@ import { Assistant, RESPONSE_STYLES } from '../ai/assistant.js';
 import { DragFollower } from './drag-follow.js';
 import { FocusTimer, LIMITS, validSeconds, PRESETS, SOUNDS, duration, minutesLeft } from './focus-timer.js';
 import { checkForUpdate, prepareInstall, releasePage } from './updater.js';
+import { decodePng, encodePng } from '../character/png-codec.js';
+import { cutSheet, idFromName, makeCharacter, renamed } from '../character/sheet-import.js';
+import { SHEET_PROMPT } from '../character/sheet-prompt.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const SELFTEST = process.argv.includes('--selftest');
@@ -13,6 +17,7 @@ const arg = (name) => process.argv.find((a) => a.startsWith(`--${name}=`))?.spli
 // QA preview: electron . --preview[=<character>] [--frame=0.5] [--capture]
 const PREVIEW = process.argv.some((a) => a === '--preview' || a.startsWith('--preview='));
 // QA: electron . --settings-preview=character|behavior  (captures qa/settings-<tab>.png)
+//     [--character=<id>] [--sheet=<image>: start adding a character from it]
 const SETTINGS_PREVIEW = arg('settings-preview');
 // QA: electron . --selftest --edge --hold=60000 --timer-demo=60  (starts the
 // focus timer at once, running 60 times fast)
@@ -92,8 +97,11 @@ function saveSettings() {
 // Bundled characters live in <app>/characters; user characters in
 // <userData>/characters/<id>/character.json (same schema).
 
+const userCharactersDir = () => path.join(app.getPath('userData'), 'characters');
+const isCustom = (entry) => entry.dir.startsWith(userCharactersDir() + path.sep);
+
 function characterDirs() {
-  return [path.join(ROOT, 'characters'), path.join(app.getPath('userData'), 'characters')];
+  return [path.join(ROOT, 'characters'), userCharactersDir()];
 }
 
 function listCharacters() {
@@ -114,6 +122,15 @@ function listCharacters() {
   return [...found.values()].sort((a, b) => a.order - b.order || a.displayName.localeCompare(b.displayName));
 }
 
+// The sheet's URL carries its modification time: a character deleted and added
+// again under the same id must not show the old, cached image.
+function sheetUrl(dir, file) {
+  const p = path.join(dir, file);
+  const url = pathToFileURL(p);
+  try { url.search = `v=${Math.round(fs.statSync(p).mtimeMs)}`; } catch { /* missing: validation reports it */ }
+  return url.href;
+}
+
 // First visible frame of RestPose, used as the character's thumbnail.
 function characterCard(entry) {
   const data = JSON.parse(fs.readFileSync(path.join(entry.dir, 'character.json'), 'utf8'));
@@ -122,8 +139,8 @@ function characterCard(entry) {
   const { cellWidth, cellHeight } = data.spritesheet;
   return {
     id: data.id, displayName: data.displayName, description: data.description,
-    sheetUrl: pathToFileURL(path.join(entry.dir, data.spritesheet.path)).href,
-    cell, cellWidth, cellHeight,
+    sheetUrl: sheetUrl(entry.dir, data.spritesheet.path),
+    cell, cellWidth, cellHeight, custom: isCustom(entry),
   };
 }
 
@@ -131,7 +148,7 @@ function loadCharacter(id) {
   const all = listCharacters();
   const entry = all.find((c) => c.id === id) || all.find((c) => c.id === 'clippy') || all[0];
   const data = JSON.parse(fs.readFileSync(path.join(entry.dir, 'character.json'), 'utf8'));
-  return { data, sheetUrl: pathToFileURL(path.join(entry.dir, data.spritesheet.path)).href };
+  return { data, sheetUrl: sheetUrl(entry.dir, data.spritesheet.path) };
 }
 
 // ---- window ---------------------------------------------------------------
@@ -388,6 +405,124 @@ function hidePet() {
   if (win?.isVisible()) win.webContents.send('pet:visibility', 'hide');
 }
 
+// ---- custom characters (Settings > Character) -------------------------------
+// A sprite sheet drawn by an image model from SHEET_PROMPT becomes a character:
+// pick the image (it is cut and previewed), name it, and it is added and
+// selected. Custom characters can be renamed and deleted; bundled ones cannot.
+
+let pendingSheet = null; // { png, cellWidth, cellHeight } of a cut sheet waiting for a name
+
+// Poses are scaled to Clippy's height anyway: larger images only cost time
+// (the cut runs on the main thread, about a second at this size).
+const MAX_SHEET_WIDTH = 2048;
+
+const cleanName = (name) => String(name ?? '').replace(/\s+/g, ' ').trim().slice(0, 30);
+
+function readImage(file) {
+  let img = nativeImage.createFromPath(file); // PNG (any depth), JPEG
+  if (img.isEmpty()) {
+    // HEIC, WebP, TIFF…: macOS's own converter reads them.
+    const tmp = path.join(app.getPath('temp'), `deskling-sheet-${process.pid}.png`);
+    try {
+      execFileSync('sips', ['-s', 'format', 'png', file, '--out', tmp], { stdio: 'ignore' });
+      img = nativeImage.createFromPath(tmp);
+    } catch { /* not an image */ } finally {
+      fs.rmSync(tmp, { force: true });
+    }
+  }
+  if (img.isEmpty()) throw new Error('Deskling can’t read this file. Use a PNG or JPEG image.');
+  if (img.getSize().width > MAX_SHEET_WIDTH) img = img.resize({ width: MAX_SHEET_WIDTH, quality: 'best' });
+  return decodePng(img.toPNG());
+}
+
+async function chooseSheet() {
+  const qaSheet = SETTINGS_PREVIEW && arg('sheet');
+  if (qaSheet) return qaSheet;
+  const { canceled, filePaths } = await dialog.showOpenDialog(settingsWin, {
+    title: 'Choose a Sprite Sheet',
+    buttonLabel: 'Choose',
+    properties: ['openFile'],
+    filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'heic', 'webp'] }],
+  });
+  return canceled ? null : filePaths[0] ?? null;
+}
+
+function prepareSheet(file) {
+  pendingSheet = null;
+  try {
+    const { sheet, cellWidth, cellHeight, warnings } = cutSheet(readImage(file));
+    const png = encodePng(sheet);
+    pendingSheet = { png, cellWidth, cellHeight };
+    return { sheetUrl: `data:image/png;base64,${png.toString('base64')}`, cell: [0, 0], cellWidth, cellHeight, warnings };
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+function addCharacter(rawName) {
+  const name = cleanName(rawName);
+  if (!pendingSheet || !name) return { error: 'Choose an image and give the character a name.' };
+  const taken = new Set(listCharacters().map((c) => c.id));
+  const base = idFromName(name) || 'character';
+  let id = base;
+  for (let n = 2; taken.has(id) || fs.existsSync(path.join(userCharactersDir(), id)); n++) id = `${base}-${n}`;
+  const { png, cellWidth, cellHeight } = pendingSheet;
+  const dir = path.join(userCharactersDir(), id);
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'spritesheet.png'), png);
+    writeCharacter(dir, makeCharacter({ name, id, cellWidth, cellHeight }));
+  } catch (e) {
+    fs.rmSync(dir, { recursive: true, force: true });
+    return { error: `Couldn’t save the character: ${e.message}` };
+  }
+  pendingSheet = null;
+  charactersChanged();
+  updateSettings({ character: id });
+  return { id };
+}
+
+const writeCharacter = (dir, data) => fs.writeFileSync(path.join(dir, 'character.json'), `${JSON.stringify(data, null, 1)}\n`);
+const customEntry = (id) => listCharacters().find((c) => c.id === id && isCustom(c));
+
+function renameCharacter(id, rawName) {
+  const entry = customEntry(id);
+  const name = cleanName(rawName);
+  if (!entry || !name) return;
+  const file = path.join(entry.dir, 'character.json');
+  writeCharacter(entry.dir, renamed(JSON.parse(fs.readFileSync(file, 'utf8')), name));
+  charactersChanged();
+  // The pet keeps going (no goodbye and hello, the conversation stays); only
+  // its name and persona change.
+  if (id === settings.character) {
+    const { data } = loadCharacter(id);
+    assistant.setPersona(data.persona, { keepHistory: true });
+    win?.webContents.send('pet:renamed', { displayName: data.displayName, persona: data.persona });
+  }
+}
+
+async function deleteCharacter(id) {
+  const entry = customEntry(id);
+  if (!entry) return false;
+  const { response } = await dialog.showMessageBox(settingsWin, {
+    type: 'warning',
+    message: `Delete “${entry.displayName}”?`,
+    detail: 'The character and its sprite sheet are removed from this Mac. This can’t be undone.',
+    buttons: ['Delete', 'Cancel'],
+    defaultId: 1,
+    cancelId: 1,
+  });
+  if (response !== 0) return false;
+  if (id === settings.character) updateSettings({ character: 'clippy' });
+  fs.rmSync(entry.dir, { recursive: true, force: true });
+  charactersChanged();
+  return true;
+}
+
+function charactersChanged() {
+  settingsWin?.webContents.send('settings:characters', listCharacters().map(characterCard));
+}
+
 // ---- menus ----------------------------------------------------------------
 
 function switchCharacter(id) {
@@ -476,6 +611,10 @@ function openSettings(tab) {
         const [width, height] = size.split('x').map(Number);
         settingsWin.setBounds({ ...settingsWin.getBounds(), width, height });
         await new Promise((r) => setTimeout(r, 400));
+      }
+      if (arg('sheet')) {
+        await settingsWin.webContents.executeJavaScript(`document.querySelector('.add-tile').click()`);
+        await new Promise((r) => setTimeout(r, 1500));
       }
       const tabState = await settingsWin.webContents.executeJavaScript(`location.hash + ' selected=' + document.querySelector('[aria-selected=true]')?.id`);
       console.log(`[settings-preview] tab ${tabState}`);
@@ -807,6 +946,13 @@ function registerIpc() {
     balloons: Object.fromEntries(Object.entries(BALLOON_THEMES).map(([id, t]) => [id, t.label])),
   }));
   ipcMain.on('settings:set', (_e, patch) => updateSettings(patch));
+  ipcMain.handle('characters:choose', () => chooseSheet());
+  ipcMain.handle('characters:prepare', (_e, file) => prepareSheet(file));
+  ipcMain.handle('characters:add', (_e, name) => addCharacter(name));
+  ipcMain.on('characters:cancel', () => { pendingSheet = null; });
+  ipcMain.on('characters:rename', (_e, id, name) => renameCharacter(id, name));
+  ipcMain.handle('characters:delete', (_e, id) => deleteCharacter(id));
+  ipcMain.on('characters:copy-prompt', () => clipboard.writeText(SHEET_PROMPT));
   ipcMain.on('settings:fit', (_e, { height, extra }) => {
     if (!settingsWin) return;
     // `height` is the active pane's natural content height: it is the minimum,
@@ -887,7 +1033,7 @@ app.whenReady().then(() => {
     copyright: '© 2026 Myrick',
   });
   // Selftest can target one character without touching saved settings.
-  if (SELFTEST && arg('character')) settings.character = arg('character');
+  if ((SELFTEST || SETTINGS_PREVIEW) && arg('character')) settings.character = arg('character');
   if (SELFTEST && arg('scale')) settings.scale = Number(arg('scale'));
   if (SELFTEST && arg('balloon') in BALLOON_THEMES) settings.balloon = arg('balloon');
   if (SELFTEST) {

@@ -2,7 +2,8 @@
 // the main process, which persists it and broadcasts it to the pet.
 
 const $ = (sel) => document.querySelector(sel);
-const { settings: initial, characters, ai, styles, balloons, timer } = await window.pet.getSettings();
+const { settings: initial, characters: initialCharacters, ai, styles, balloons, timer } = await window.pet.getSettings();
+let characters = initialCharacters;
 let settings = initial;
 
 // ---- tabs ------------------------------------------------------------------
@@ -102,31 +103,166 @@ function sprite(card, box) {
 }
 
 const grid = $('#grid');
-const tiles = characters.map((card) => {
-  const tile = document.createElement('button');
-  tile.className = 'tile';
-  tile.setAttribute('role', 'radio');
-  tile.title = card.description || card.displayName;
-  const thumb = document.createElement('div');
-  thumb.className = 'thumb';
-  thumb.append(sprite(card, { w: 52, h: 48 }));
-  const name = document.createElement('span');
-  name.textContent = card.displayName;
-  tile.append(thumb, name);
-  tile.addEventListener('click', () => window.pet.setSettings({ character: card.id }));
-  grid.append(tile);
-  return { tile, card };
-});
+let tiles = [];
+function buildGrid() {
+  tiles = characters.map((card) => {
+    const tile = document.createElement('button');
+    tile.className = 'tile';
+    tile.setAttribute('role', 'radio');
+    tile.title = card.description || card.displayName;
+    const thumb = document.createElement('div');
+    thumb.className = 'thumb';
+    thumb.append(sprite(card, { w: 52, h: 48 }));
+    const name = document.createElement('span');
+    name.textContent = card.displayName;
+    tile.append(thumb, name);
+    tile.addEventListener('click', () => window.pet.setSettings({ character: card.id }));
+    return { tile, card };
+  });
+  // Last tile: add a character from a generated sprite sheet.
+  const add = document.createElement('button');
+  add.className = 'tile add-tile';
+  add.title = 'Add a character from a sprite sheet image';
+  const plus = document.createElement('div');
+  plus.className = 'thumb';
+  plus.textContent = '+';
+  const label = document.createElement('span');
+  label.textContent = 'Add…';
+  add.append(plus, label);
+  add.addEventListener('click', pickSheet);
+  grid.replaceChildren(...tiles.map((t) => t.tile), add);
+}
+buildGrid();
 
 grid.addEventListener('keydown', (e) => {
   const keys = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: 4, ArrowUp: -4 };
   if (!(e.key in keys)) return;
-  e.preventDefault();
   const i = tiles.findIndex((t) => t.tile === document.activeElement);
+  if (i < 0) return;
+  e.preventDefault();
   const next = tiles[Math.max(0, Math.min(tiles.length - 1, i + keys[e.key]))];
   next.tile.focus();
   next.tile.click();
 });
+
+window.pet.characters.onChange((list) => {
+  characters = list;
+  buildGrid();
+  render();
+  fitWindow();
+});
+
+// The card under the grid: naming a new character, or renaming / deleting the
+// selected custom one. Bundled characters have no card.
+const custom = {
+  card: $('#custom'), thumb: $('#custom-thumb'), name: $('#custom-name'), note: $('#custom-note'),
+  primary: $('#custom-primary'), secondary: $('#custom-secondary'),
+};
+// While adding: { busy } as the image is cut, { preview, warnings } waiting
+// for a name, { error } if the image can't be used.
+let adding = null;
+
+async function pickSheet() {
+  const file = await window.pet.characters.choose();
+  if (!file) return;
+  adding = { busy: true };
+  custom.name.value = '';
+  render();
+  fitWindow();
+  // Let "Preparing…" paint before main spends a moment cutting the sheet.
+  await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+  const result = await window.pet.characters.prepare(file);
+  adding = result.error ? { error: result.error } : { preview: result, warnings: result.warnings };
+  render();
+  if (!adding.error) custom.name.focus();
+}
+
+function stopAdding() {
+  if (adding?.preview) window.pet.characters.cancel();
+  adding = null;
+  render();
+  fitWindow();
+}
+
+async function confirmAdd() {
+  const name = custom.name.value.trim();
+  if (!name) return custom.name.focus();
+  custom.primary.disabled = true;
+  const result = await window.pet.characters.add(name);
+  if (result?.id) {
+    adding = null;
+    fitWindow();
+  } else {
+    adding.saveError = result?.error || 'Couldn’t add the character.';
+  }
+  render();
+}
+
+custom.primary.addEventListener('click', () => {
+  if (adding?.busy) return;
+  if (adding?.error) pickSheet();
+  else if (adding) confirmAdd();
+  else window.pet.characters.remove(settings.character);
+});
+custom.secondary.addEventListener('click', stopAdding);
+custom.name.addEventListener('input', () => { if (adding?.preview) custom.primary.disabled = !custom.name.value.trim(); });
+custom.name.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); if (adding?.preview) confirmAdd(); else custom.name.blur(); }
+  if (e.key === 'Escape') { e.preventDefault(); if (adding) stopAdding(); else { custom.name.value = currentCard()?.displayName || ''; custom.name.blur(); } }
+});
+custom.name.addEventListener('change', () => {
+  const card = currentCard();
+  const name = custom.name.value.trim();
+  if (adding || !card?.custom) return;
+  if (!name) custom.name.value = card.displayName;
+  else if (name !== card.displayName) window.pet.characters.rename(card.id, name);
+});
+$('#copy-prompt').addEventListener('click', (e) => {
+  window.pet.characters.copyPrompt();
+  e.target.textContent = 'copied';
+  setTimeout(() => { e.target.textContent = 'copy the prompt'; }, 1600);
+});
+
+const currentCard = () => characters.find((c) => c.id === settings.character);
+
+function renderCustom() {
+  const card = currentCard();
+  const show = Boolean(adding || card?.custom);
+  custom.card.hidden = !show;
+  if (!show) return;
+  const failed = Boolean(adding?.error);
+  custom.card.classList.toggle('failed', failed);
+  custom.card.classList.toggle('busy', Boolean(adding?.busy));
+  custom.name.hidden = failed || Boolean(adding?.busy);
+  custom.secondary.hidden = !adding || Boolean(adding.busy);
+  custom.primary.classList.toggle('danger', !adding);
+  custom.note.classList.toggle('warn', Boolean(adding?.saveError || adding?.warnings?.length));
+  if (adding?.busy) {
+    custom.thumb.replaceChildren();
+    custom.note.textContent = 'Preparing the character…';
+    custom.primary.textContent = 'Add';
+    custom.primary.disabled = true;
+  } else if (failed) {
+    custom.thumb.replaceChildren();
+    custom.note.textContent = `Couldn’t use this image: ${adding.error}`;
+    custom.secondary.textContent = 'Cancel';
+    custom.primary.textContent = 'Choose Another…';
+    custom.primary.disabled = false;
+  } else if (adding) {
+    custom.thumb.replaceChildren(sprite(adding.preview, { w: 52, h: 48 }));
+    custom.note.textContent = adding.saveError
+      || (adding.warnings.length ? `Some poses may look off: ${adding.warnings.join('; ')}` : 'New character');
+    custom.secondary.textContent = 'Cancel';
+    custom.primary.textContent = 'Add';
+    custom.primary.disabled = !custom.name.value.trim();
+  } else {
+    custom.thumb.replaceChildren(sprite(card, { w: 52, h: 48 }));
+    if (document.activeElement !== custom.name) custom.name.value = card.displayName;
+    custom.note.textContent = 'Your character · click the name to rename';
+    custom.primary.textContent = 'Delete…';
+    custom.primary.disabled = false;
+  }
+}
 
 // Balloon style: a miniature of each look (settings.css .mini-<id>).
 const balloonRow = $('#balloons');
@@ -250,7 +386,8 @@ function render() {
     tile.setAttribute('aria-checked', String(on));
     tile.tabIndex = on ? 0 : -1;
   }
-  const current = characters.find((c) => c.id === settings.character) || characters[0];
+  renderCustom();
+  const current = currentCard() || characters[0];
   $('#avatar').replaceChildren(sprite(current, { w: 30, h: 30 }));
   $('#enabled').checked = settings.enabled;
   grid.classList.toggle('off', !settings.enabled);

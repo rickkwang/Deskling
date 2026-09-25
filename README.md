@@ -38,6 +38,7 @@ npx electron . --selftest --edge --hold=60000 --timer-demo=60   # QA: start the 
 - **Focus Timer** (Pomodoro): a focus session, then a break that starts on its own; after the break it waits for you to start the next round. A pill above the pet's head counts down in the balloon style (click it to pause, resume or start the next round). When a phase ends it plays the chosen sound and the character says a line written by the model, or a preset one from its `persona.timer` when the model is unavailable; with the pet hidden, a system notification does instead.
 - **Assistant Settings** has two tabs:
   - **Character**: the Desktop Assistant on/off switch, the character grid, Size, and the speech Balloon style (Classic, Aqua, macOS, Windows 98, System 7).
+    **Add…** at the end of the grid makes a character from a generated sprite sheet (**copy the prompt** gives the image-model prompt): pick the image, name it, and it is added and selected. A custom character can be renamed (click its name) or deleted.
   - **Behavior**: Greeting, Speech, Response Style (Concise, Normal, Chatty, Detailed, Friendly, Professional, Playful), local Model, the Focus timer (focus and break length in hours, minutes and seconds; the end Sound), and free-form Instructions (up to 500 characters).
 - Settings are saved to `~/Library/Application Support/Deskling/settings.json`.
 - `electron . --settings-preview=character|behavior` captures the settings window to `qa/` for QA.
@@ -58,7 +59,7 @@ src/runtime/     AnimationPlayer (frames, branching, exit branches) + CharacterR
 src/ai/          Ollama provider (local models only, never pulls) + Assistant (persona, history)
 src/main/        Electron shell: transparent pet + balloon windows, drag, menus, tray, settings
 src/renderer/    pet, speech balloon, settings UI; selftest, preview, audit
-tools/           clippy.js → Character importer, validator
+tools/           clippy.js and generated-sheet → Character importers, validator
 ```
 
 To add a custom character, put `character.json` + a spritesheet in
@@ -69,6 +70,12 @@ The character must map the states `idle listening thinking speaking confused ack
 `persona.timer.breakDone` list the lines it says when a focus session or a break ends and the model cannot write one.
 With `"animationSet": "office"` the character enters with its `greeting` and leaves with its `goodbye` (as the Office
 assistants do); otherwise it enters with `show`, then `greeting` to say hello, and leaves with `hide`.
+
+A character can also be made from one generated image: an 8 × 5 grid of poses on a flat `#FF00FF` (or `#00FF00`)
+background, in the order listed at the top of `src/character/sheet-import.js`. Then run
+`npm run import:sheet -- <image> --name "My Pet"`. It keys out the background, drops stray marks, stands every pose
+on the same ground line, scales it to Clippy's height (`--height` to change) and writes the frame tables, timed like
+the Agent characters, to the user characters folder.
 
 ## Characters and credits
 

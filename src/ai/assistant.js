@@ -110,9 +110,10 @@ export class Assistant {
     return parts.filter(Boolean).join(' ');
   }
 
-  setPersona(persona) {
+  // keepHistory: the same character under a new name carries on the conversation.
+  setPersona(persona, { keepHistory = false } = {}) {
     this.persona = persona;
-    this.reset();
+    if (!keepHistory) this.reset();
   }
 
   reset() {

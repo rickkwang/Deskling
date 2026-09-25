@@ -28,6 +28,17 @@
       </header>
       <h2 class="heading">Choose a character</h2>
       <div class="grid" id="grid" role="radiogroup" aria-label="Character"></div>
+      <!-- A new character being added, or the selected custom one (settings.js). -->
+      <div class="card custom" id="custom" hidden>
+        <div class="thumb" id="custom-thumb" aria-hidden="true"></div>
+        <div class="custom-main">
+          <input type="text" class="name-field" id="custom-name" maxlength="30" spellcheck="false" placeholder="Name your character" aria-label="Character name">
+          <small id="custom-note"></small>
+        </div>
+        <button type="button" class="button" id="custom-secondary"></button>
+        <button type="button" class="button" id="custom-primary"></button>
+      </div>
+      <p class="help make-own">Make your own: <button type="button" class="link" id="copy-prompt">copy the prompt</button>, have an image model draw the sheet, then choose Add.</p>
       <div class="card size-row">
         <label for="scale">Size</label>
         <span class="size-end" aria-hidden="true">Small</span>
