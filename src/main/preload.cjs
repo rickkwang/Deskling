@@ -45,6 +45,7 @@ contextBridge.exposeInMainWorld('pet', {
   onBubbleTyping: on('bubble:typing'),
   onBubbleEscape: on('bubble:escape'),
   onBubbleClick: on('bubble:click'),
+  onAway: on('pet:away'),
   // Used inside the balloon window.
   balloon: {
     onContent: on('bubble:content'),

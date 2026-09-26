@@ -117,6 +117,10 @@ function listen() {
 }
 
 window.pet.onBubbleSubmit((text) => ask(text));
+// Listening lasts while the user is in Deskling; once they go to another app
+// (to Claude Code, say), the pet is free again, and back to work if Claude is
+// busy.
+window.pet.onAway(() => { if (runtime.state === 'listening' && !busy) runtime.setState('idle'); });
 window.pet.onBubbleTyping(() => listen());
 window.pet.onBubbleEscape(() => closeBubble());
 
