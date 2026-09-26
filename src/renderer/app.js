@@ -32,7 +32,10 @@ function mountCharacter({ data, sheetUrl }) {
   runtime = new CharacterRuntime(petEl, data, sheetUrl);
   applyLayout();
   petEl.setAttribute('aria-label', data.displayName);
-  runtime.addEventListener('state', (e) => log(`state ${e.detail.from} -> ${e.detail.to}`));
+  runtime.addEventListener('state', (e) => {
+    log(`state ${e.detail.from} -> ${e.detail.to}`);
+    if (e.detail.to === 'idle') backToWork();
+  });
   runtime.addEventListener('animation', (e) => {
     const { name, kind, level } = e.detail;
     const src = character.states[kind]?.source;
@@ -87,14 +90,15 @@ function hideBubble() {
 }
 
 function closeBubble() {
+  if (showingNotice()) window.pet.claude.dismiss(); // seen
   hideBubble();
   cancelSpeech();
   if (busy) window.pet.cancel();
   if (runtime.state !== 'hidden') runtime.setState('idle');
 }
 
-function say(text, { error = false } = {}) {
-  content = { text, error, dots: false };
+function say(text, { error = false, link = false } = {}) {
+  content = { text, error, dots: false, link };
   renderBalloon();
 }
 
@@ -108,6 +112,7 @@ function greeting() {
 }
 
 function listen() {
+  if (runtime.state === 'thinking' && !busy) runtime.setState('idle'); // working along with Claude Code
   if (['idle', 'speaking'].includes(runtime.state)) runtime.setState('listening');
 }
 
@@ -147,6 +152,7 @@ async function ask(text) {
   busy = false;
   if (res.ok && res.text.trim()) {
     say(res.text.trim());
+    unread = content.text;
     // Like an Agent Speak request: stay in speaking until the gesture and the
     // spoken text (Speech setting) are finished, then idle.
     await Promise.all([runtime.settle(), settings.speech ? speak(res.text.trim()) : null]);
@@ -160,6 +166,7 @@ async function ask(text) {
     runtime.act('confused');
   }
   if (pendingReminder) remind(pendingReminder);
+  else showNotice();
   return res;
 }
 
@@ -215,11 +222,75 @@ async function remind(info) {
   const text = await window.pet.timer.remark(info);
   busy = false;
   say(text);
+  unread = text;
+  backToWork(); // it went idle while busy, which kept it from going back
   if (pendingReminder) return remind(pendingReminder);
   if (settings.speech) speak(text);
+  showNotice();
 }
 window.pet.timer.onEnd(remind);
 window.pet.timer.onSound((file) => new Audio(`sounds/${file}`).play().catch(() => {}));
+
+// ---- Claude Code ------------------------------------------------------------
+// Main follows Claude Code sessions through its hooks. While one works, the
+// pet works too (its thinking animation, whenever it isn't busy with the
+// user). The balloon shows the notice that matters most (waiting for an
+// answer, failed, done) until it's seen; clicking it goes to the terminal.
+
+let claude = { working: false, notice: null, more: 0 };
+let noticeId = 0; // the newest notice announced
+let noticeText = ''; // the notice at the end of the balloon's text, if any
+// A reply or reminder the user may not have read yet: a notice that follows
+// goes under it rather than replacing it.
+let unread = '';
+const GESTURES = { asking: 'getAttention', failed: 'confused', done: 'acknowledge' };
+
+const showingNotice = () => balloonOpen && Boolean(noticeText) && content.text.endsWith(noticeText);
+
+function toWork() {
+  if (claude.working && !busy && !entering && runtime.state === 'idle') runtime.setState('thinking');
+}
+
+// Back in idle (a reply, a reminder, a gesture): back to work once it's over.
+async function backToWork() {
+  await new Promise((r) => setTimeout(r)); // let the caller queue its gesture
+  await runtime.settle();
+  toWork();
+}
+
+// Shows main's current notice: a new one with a gesture, a changed one
+// quietly; with none left, a balloon showing one folds away. Called again
+// whenever the pet is free.
+function showNotice() {
+  if (busy || entering || runtime.state === 'hidden') return;
+  const { notice, more } = claude;
+  if (!notice) {
+    if (showingNotice()) hideBubble();
+    noticeText = '';
+    return;
+  }
+  const fresh = notice.id > noticeId;
+  const text = more ? `${notice.line}\n(${more} more waiting)` : notice.line;
+  if (!fresh && (!showingNotice() || text === noticeText)) return;
+  const before = fresh
+    ? (balloonOpen && unread && content.text === unread ? `${unread}\n\n` : '')
+    : content.text.slice(0, -noticeText.length);
+  const look = { error: notice.kind === 'failed' && !before, link: notice.terminal };
+  noticeText = text;
+  if (!fresh) return say(before + text, look);
+  noticeId = notice.id;
+  unread = '';
+  announce(before + text, { ...look, gesture: GESTURES[notice.kind] });
+  if (settings.speech) speak(notice.line);
+}
+
+window.pet.claude.onStatus((status) => {
+  claude = status;
+  if (claude.working) toWork();
+  else if (runtime.state === 'thinking' && !busy) runtime.setState('idle');
+  showNotice();
+});
+window.pet.onBubbleClick(() => { if (showingNotice()) window.pet.claude.open(); });
 
 // ---- input: click vs drag, click-through ---------------------------------
 
@@ -307,6 +378,8 @@ window.pet.onVisibility(async (v) => {
   await runtime.show();
   entering = false;
   announceUpdate();
+  showNotice();
+  backToWork();
 });
 window.pet.onSettings((next) => {
   const rescale = next.scale !== settings.scale;
@@ -331,6 +404,7 @@ window.pet.onCharacter(async (next) => {
   await runtime.show({ greet: true });
   say(greeting());
   if (settings.greeting) openBubble();
+  backToWork(); // a new runtime starts idle without a state change
 });
 
 // Renamed in Settings: same sprites, so nothing is replayed.
@@ -349,11 +423,11 @@ window.pet.onRenamed(({ displayName, persona }) => {
 let pendingUpdate = null;
 let entering = false; // the pet's entrance is playing: wait for it
 
-function announce(text, { error = false } = {}) {
+function announce(text, { error = false, link = false, gesture = error ? 'confused' : 'getAttention' } = {}) {
   if (busy) return false;
-  say(text, { error });
+  say(text, { error, link });
   runtime.setState('idle');
-  runtime.act(error ? 'confused' : 'getAttention');
+  runtime.act(gesture);
   openBubble();
   return true;
 }
@@ -396,6 +470,7 @@ settings = init.settings;
 document.body.dataset.theme = settings.balloon;
 mountCharacter(init.character);
 renderTimer(await window.pet.timer.status());
+claude = await window.pet.claude.status();
 log(`ai: ${init.ai.available ? `ollama ok, local models [${init.ai.models.join(', ')}], using ${init.ai.model}` : `unavailable (${init.ai.error})`}`);
 // Greeting setting: "Say hello when the assistant opens" (the hello gesture
 // and balloon). Office characters' entrance is their Greeting either way.
@@ -407,6 +482,7 @@ if (!init.ai.model) {
   say(greeting());
   if (settings.greeting) greeted.then(() => openBubble());
 }
+greeted.then(() => { showNotice(); backToWork(); });
 
 if (selftest) {
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));

@@ -108,9 +108,12 @@ function setRect(sel, x, y, width, height) {
   for (const [k, v] of Object.entries({ x, y, width, height })) el.setAttribute(k, v);
 }
 
-api.onContent(({ text, error, dots, busy: b }) => {
+api.onContent(({ text, error, dots, busy: b, link }) => {
   busy = b;
   msg.classList.toggle('error', Boolean(error));
+  // A Claude Code notice: clicking it goes to the terminal.
+  msg.classList.toggle('link', Boolean(link));
+  msg.title = link ? 'Click to go to the terminal' : '';
   msg.classList.toggle('dots', Boolean(dots));
   msg.textContent = dots ? 'Thinking…' : text;
   msg.scrollTop = msg.scrollHeight;
@@ -150,6 +153,7 @@ input.addEventListener('input', () => {
   sendBtn.disabled = !input.value.trim() || busy;
   api.typing();
 });
+msg.addEventListener('click', () => { if (msg.classList.contains('link')) api.click(); });
 input.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') api.escape();
 });

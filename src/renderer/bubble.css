@@ -88,6 +88,7 @@ body.open #bubble {
 }
 [data-theme] #msg:not(:hover)::-webkit-scrollbar-button { background: transparent; }
 #msg.error { color: var(--error); }
+#msg.link { cursor: pointer; }
 
 /* Waiting for the model: "Thinking…" with a light sweeping across it. */
 .dots {

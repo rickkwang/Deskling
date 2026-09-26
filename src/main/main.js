@@ -1,5 +1,5 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, Notification, Tray, nativeImage, screen, shell } from 'electron';
-import { execFileSync } from 'node:child_process';
+import { execFile, execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -7,6 +7,7 @@ import { Assistant, RESPONSE_STYLES } from '../ai/assistant.js';
 import { DragFollower } from './drag-follow.js';
 import { FocusTimer, LIMITS, validSeconds, PRESETS, SOUNDS, duration, minutesLeft } from './focus-timer.js';
 import { checkForUpdate, prepareInstall, releasePage } from './updater.js';
+import { ClaudeSessions, claudeSettingsFile, hooksInstalled, listen, readClaudeSettings, setHooks } from './claude-code.js';
 import { decodePng, encodePng } from '../character/png-codec.js';
 import { cutSheet, idFromName, makeCharacter, renamed } from '../character/sheet-import.js';
 import { SHEET_PROMPT } from '../character/sheet-prompt.js';
@@ -22,6 +23,10 @@ const SETTINGS_PREVIEW = arg('settings-preview');
 // QA: electron . --selftest --edge --hold=60000 --timer-demo=60  (starts the
 // focus timer at once, running 60 times fast)
 const TIMER_DEMO = Number(arg('timer-demo')) || 0;
+// QA: electron . --selftest --edge --hold=60000 --claude-code[=<port>]  (listens
+// for Claude Code hooks without installing them, on another port if a real
+// Deskling has this one; post events with curl)
+const CLAUDE_DEMO = process.argv.some((a) => a === '--claude-code' || a.startsWith('--claude-code='));
 // QA: electron . --audit  (sprite/animation visibility audit for every character)
 const AUDIT = process.argv.includes('--audit');
 // QA captures: in the project, or beside the settings in a packaged app (its
@@ -48,6 +53,7 @@ let settings = {
   // Behavior (Assistant Settings)
   enabled: true, greeting: true, speech: false, responseStyle: 'normal', instructions: '',
   focusSeconds: 25 * 60, breakSeconds: 5 * 60, timerSound: 'indigo', // Focus Timer
+  claudeCode: false, // work along with Claude Code (hooks in its settings.json)
 };
 // Speech balloon looks: src/renderer/balloon-themes/<id>.css. `tail` is how
 // far the tail tip reaches beyond the box (it sets where the window goes);
@@ -543,6 +549,7 @@ function updateSettings(patch) {
   if (patch.focusSeconds !== undefined && !validSeconds('focus', patch.focusSeconds)) delete patch.focusSeconds;
   if (patch.breakSeconds !== undefined && !validSeconds('break', patch.breakSeconds)) delete patch.breakSeconds;
   if (patch.timerSound !== undefined && !(patch.timerSound in SOUNDS)) delete patch.timerSound;
+  if (patch.claudeCode !== undefined && patch.claudeCode !== settings.claudeCode && !connectClaudeCode(Boolean(patch.claudeCode))) delete patch.claudeCode;
   const prev = { ...settings };
   if (patch.character && patch.character !== prev.character) switchCharacter(patch.character);
   Object.assign(settings, patch);
@@ -766,6 +773,89 @@ function timerMenu() {
   ];
 }
 
+// ---- Claude Code ------------------------------------------------------------
+// Like Codex's pets: while a Claude Code session works, the pet works (its
+// thinking animation), and it shows what needs the user: a session waiting
+// for an answer, failed, or done; clicking it brings the terminal forward.
+// Turning it on puts hooks into Claude Code's settings.json that post each
+// event here (claude-code.js).
+
+const claude = {
+  server: null,
+  error: '', // why the last connect failed, for Settings
+  sessions: new ClaudeSessions({ onChange: () => sendClaudeStatus() }),
+};
+setInterval(() => claude.sessions.sweep(), 60_000);
+
+const home = (p) => p.replace(app.getPath('home'), '~');
+
+// The status with the notice written out for the balloon.
+function claudeStatus() {
+  const { working, notice: n, more } = claude.sessions.status();
+  if (!n) return { working, notice: null, more };
+  const line = {
+    done: `Claude is done in ${n.project}${n.text ? `: ${n.text}` : '.'}`,
+    asking: n.why === 'question' ? `Claude has a question for you in ${n.project}.` : `Claude needs your OK in ${n.project}.`,
+    failed: `Claude stopped with an error in ${n.project}${n.text ? `: ${n.text}` : '.'}`,
+  }[n.kind];
+  return { working, notice: { id: n.id, kind: n.kind, line, terminal: Boolean(n.terminal) }, more };
+}
+
+function sendClaudeStatus() {
+  win?.webContents.send('claude:status', claudeStatus());
+}
+
+// A click on the notice: to the terminal Claude Code runs in, and it's seen.
+function openClaudeNotice() {
+  const terminal = claude.sessions.status().notice?.terminal;
+  if (terminal) execFile('/usr/bin/open', ['-b', terminal], (e) => e && console.warn(`[claude-code] ${e.message}`));
+  claude.sessions.dismiss();
+}
+
+async function startClaudeServer() {
+  if (claude.server) return true;
+  try {
+    claude.server = await listen((event) => claude.sessions.handle(event), Number(arg('claude-code')) || undefined);
+    return true;
+  } catch (e) {
+    claude.error = e.code === 'EADDRINUSE' ? 'Another app is using Deskling’s port. Quit it, then turn this on again.' : e.message;
+    console.warn(`[claude-code] ${e.message}`);
+    return false;
+  }
+}
+
+// Adds or removes the hooks; false (and claude.error) if that failed.
+function connectClaudeCode(on) {
+  claude.error = '';
+  try {
+    if (!SELFTEST && !SETTINGS_PREVIEW) setHooks(on);
+  } catch (e) {
+    claude.error = e.message;
+    sendClaudeState();
+    return false;
+  }
+  if (on) startClaudeServer().then(sendClaudeState);
+  else {
+    claude.server?.close();
+    claude.server = null;
+    claude.sessions.sessions.clear();
+    claude.sessions.changed();
+  }
+  sendClaudeState();
+  return true;
+}
+
+// For Settings: whether the hooks are in place (someone may remove them).
+function claudeState() {
+  let hooks = false;
+  try { hooks = hooksInstalled(readClaudeSettings()); } catch { /* shown by error */ }
+  return { file: home(claudeSettingsFile()), hooks, error: claude.error };
+}
+
+function sendClaudeState() {
+  settingsWin?.webContents.send('settings:claude-code', claudeState());
+}
+
 // ---- updates --------------------------------------------------------------
 // Packaged builds look for a newer GitHub release at launch and once a day.
 // The pet mentions a new version once, when it can (it reports back); until
@@ -936,7 +1026,7 @@ function registerIpc() {
       placeBalloon();
     }
   });
-  for (const ch of ['bubble:submit', 'bubble:typing', 'bubble:escape']) {
+  for (const ch of ['bubble:submit', 'bubble:typing', 'bubble:escape', 'bubble:click']) {
     ipcMain.on(ch, (_e, payload) => win?.webContents.send(ch, payload));
   }
 
@@ -946,6 +1036,7 @@ function registerIpc() {
     ai: await assistant.refresh(settings.model),
     styles: RESPONSE_STYLES,
     timer: { limits: LIMITS, sounds: SOUNDS },
+    claudeCode: claudeState(),
     balloons: Object.fromEntries(Object.entries(BALLOON_THEMES).map(([id, t]) => [id, t.label])),
   }));
   ipcMain.on('settings:set', (_e, patch) => updateSettings(patch));
@@ -995,6 +1086,10 @@ function registerIpc() {
   ipcMain.on('timer:action', (_e, action) => timerAction(action));
   ipcMain.handle('timer:remark', (_e, info) => timerRemark(info));
   ipcMain.handle('timer:status', () => timer.status());
+  ipcMain.handle('claude:status', () => claudeStatus());
+  ipcMain.on('claude:dismiss', () => claude.sessions.dismiss());
+  ipcMain.on('claude:open', openClaudeNotice);
+  ipcMain.on('claude:reconnect', () => connectClaudeCode(true));
 
   ipcMain.handle('audit:characters', () => listCharacters().map((c) => loadCharacter(c.id)));
   // Where the feet actually are vs. where they should be (macOS may clamp windows).
@@ -1063,6 +1158,9 @@ app.whenReady().then(() => {
   createWindow();
   createTray();
   if (TIMER_DEMO) timer.start(settings.focusSeconds, settings.breakSeconds);
+  if (CLAUDE_DEMO) startClaudeServer();
+  // Rewrites hooks an older version installed (a no-op when they're current).
+  else if (settings.claudeCode && !SELFTEST) connectClaudeCode(true);
   if (app.isPackaged && !SELFTEST) {
     setTimeout(checkUpdates, 10_000);
     setInterval(checkUpdates, UPDATE_EVERY);

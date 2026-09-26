@@ -2,7 +2,7 @@
 // the main process, which persists it and broadcasts it to the pet.
 
 const $ = (sel) => document.querySelector(sel);
-const { settings: initial, characters: initialCharacters, ai, styles, balloons, timer } = await window.pet.getSettings();
+const { settings: initial, characters: initialCharacters, ai, styles, balloons, timer, claudeCode: initialClaude } = await window.pet.getSettings();
 let characters = initialCharacters;
 let settings = initial;
 
@@ -345,6 +345,33 @@ bind('#greeting', 'greeting');
 bind('#speech', 'speech');
 bind('#style', 'responseStyle', 'value');
 bind('#model', 'model', 'value');
+bind('#claude-code', 'claudeCode');
+
+// Claude Code: the switch adds or removes Deskling's hooks in Claude Code's
+// settings.json; the note says if that failed or someone took them out.
+let claude = initialClaude;
+function renderClaude() {
+  const note = $('#claude-note');
+  const help = $('#claude-help');
+  const broken = settings.claudeCode && (claude.error || !claude.hooks);
+  note.classList.toggle('warn', Boolean(claude.error || broken));
+  note.textContent = claude.error
+    || (broken ? `Its hooks are missing from ${claude.file}.` : 'Busy while Claude Code works; speaks up when it’s done or needs you');
+  help.replaceChildren(`Adds hooks to ${claude.file} (backed up first). New Claude Code sessions pick them up.`);
+  if (broken && !claude.error) {
+    const fix = document.createElement('button');
+    fix.type = 'button';
+    fix.className = 'link';
+    fix.textContent = 'Add them again';
+    fix.addEventListener('click', () => window.pet.claude.reconnect());
+    help.replaceChildren(fix, '.');
+  }
+}
+window.pet.claude.onState((next) => {
+  claude = next;
+  renderClaude();
+  fitWindow();
+});
 
 // Size: live while dragging; main resizes the pet around its feet.
 const scaleInput = $('#scale');
@@ -400,6 +427,8 @@ function render() {
     if (!durationFields(kind).includes(document.activeElement)) showDuration(kind, settings[key]);
   }
   soundSelect.value = settings.timerSound;
+  $('#claude-code').checked = settings.claudeCode;
+  renderClaude();
   if (ai.models.length) modelSelect.value = ai.models.includes(settings.model) ? settings.model : ai.model;
   if (document.activeElement !== instructions) {
     instructions.value = settings.instructions || '';
