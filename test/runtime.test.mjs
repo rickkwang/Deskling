@@ -41,6 +41,38 @@ test('stop() drops queued requests', async () => {
   rt.destroy();
 });
 
+// Switching characters while Claude Code works: the old one leaves in the
+// thinking state, and must not keep drawing over the new one.
+test('a character that left while thinking draws nothing more, even once destroyed', async () => {
+  const rt = new CharacterRuntime(el(), fast, 'x.png');
+  rt.setState('thinking');
+  await wait(100);
+  await rt.leave();
+  rt.destroy();
+  let draws = 0;
+  rt.player._draw = () => { draws++; };
+  await wait(400);
+  assert.equal(draws, 0);
+});
+
+test('a character that left does not start its state behaviour again', async () => {
+  const rt = new CharacterRuntime(el(), fast, 'x.png');
+  rt.setState('thinking');
+  await wait(100);
+  await rt.leave();
+  await wait(300);
+  assert.equal(rt.player.current, null, 'no Thinking loop behind the hidden pet');
+  rt.destroy();
+});
+
+test('destroy() lets whoever waits on a queued request go on', async () => {
+  const rt = new CharacterRuntime(el(), fast, 'x.png');
+  rt.play('Congratulate');
+  const queued = rt.play('GetAttention');
+  rt.destroy();
+  assert.equal(await Promise.race([queued, wait(1000).then(() => 'still waiting')]), 'stopped');
+});
+
 test('invalid transitions are rejected', () => {
   const rt = new CharacterRuntime(el(), fast, 'x.png');
   assert.equal(rt.setState('speaking'), false); // idle -> speaking not allowed

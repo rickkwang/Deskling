@@ -123,6 +123,7 @@ export class AnimationPlayer {
   }
 
   cut() {
+    this.generation++; // also a play still waiting on its Return
     this.pendingReturn = null;
     this.fade?.cancel();
     this.fade = null;

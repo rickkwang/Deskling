@@ -77,7 +77,7 @@ export class CharacterRuntime extends EventTarget {
     if (!req) {
       // Nothing queued: bring a posed character back to neutral (its Return),
       // except while thinking, whose loop resumes immediately.
-      if (this.player.pendingReturn && this.state !== 'thinking' && this.state !== 'hidden') {
+      if (this.player.pendingReturn && this.state !== 'thinking' && this.state !== 'hidden' && !this.left) {
         this.active = { name: 'return', kind: 'return' };
         await this.player.returnToNeutral();
         if (this.destroyed) return;
@@ -93,7 +93,7 @@ export class CharacterRuntime extends EventTarget {
     const hurry = req.loop ? null : setTimeout(() => this.player.exit({ hurry: false }), ONE_SHOT_MAX_MS);
     let result = await this.player.play(req.name);
     clearTimeout(hurry);
-    while (req.loop && result === 'done' && !this.queue.length) {
+    while (req.loop && result === 'done' && !this.queue.length && !this.destroyed) {
       result = await this.player.play(req.name);
     }
     req.resolve(result);
@@ -137,9 +137,12 @@ export class CharacterRuntime extends EventTarget {
   }
 
   // The exit animation (hiding, or before another character takes over). It
-  // ends an entrance in progress, which must not go on to its hello.
+  // ends an entrance in progress, which must not go on to its hello. Gone,
+  // the character stops its state's behaviour (a thinking loop would draw it
+  // again, over the next character) until it shows again.
   leave() {
     this.entrance = null;
+    this.left = true;
     return this.act(this._office && this.c.states.goodbye ? 'goodbye' : 'hide');
   }
 
@@ -149,6 +152,7 @@ export class CharacterRuntime extends EventTarget {
   }
 
   async show({ greet = false } = {}) {
+    this.left = false;
     const from = this.state;
     this.state = 'idle';
     this.idleSince = Date.now();
@@ -170,6 +174,7 @@ export class CharacterRuntime extends EventTarget {
 
   // Called when the queue drains: hold/loop the state's behaviour.
   _resume() {
+    if (this.left) return;
     if (this.state === 'thinking') this._playState('thinking');
     else if (this.state === 'idle') this._scheduleIdle(this.c.idle?.firstDelayMs ?? 6000);
   }
@@ -223,7 +228,7 @@ export class CharacterRuntime extends EventTarget {
   destroy() {
     this.destroyed = true;
     this._cancelIdle();
-    this.queue.splice(0);
+    this.queue.splice(0).forEach((r) => r.resolve('stopped')); // nobody waits forever
     this.player.cut();
   }
 }

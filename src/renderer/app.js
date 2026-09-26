@@ -398,16 +398,35 @@ window.pet.onChatReset(() => {
   say(greeting());
   runtime.setState('idle');
 });
+// One switch at a time, to the latest choice: picks made while a character
+// is leaving or entering are not played in between.
+let wanted = null;
+let switching = false;
 window.pet.onCharacter(async (next) => {
+  wanted = next;
+  if (switching) return;
+  switching = true;
+  entering = true; // like any entrance: no work or notices until it's over
   if (busy) window.pet.cancel();
   cancelSpeech();
   hideBubble();
-  await runtime.leave();
-  mountCharacter(next);
-  // Office: Greeting plays "when the character is chosen".
-  await runtime.show({ greet: true });
+  try {
+    while (wanted) {
+      await runtime.leave();
+      const target = wanted;
+      wanted = null;
+      mountCharacter(target); // throws on invalid character data
+      // Office: Greeting plays "when the character is chosen".
+      await runtime.show({ greet: true });
+    }
+  } finally {
+    // A failed switch must not block the next one, or the pet's work.
+    switching = false;
+    entering = false;
+  }
   say(greeting());
   if (settings.greeting) openBubble();
+  showNotice();
   backToWork(); // a new runtime starts idle without a state change
 });
 
