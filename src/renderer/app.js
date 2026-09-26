@@ -263,14 +263,14 @@ async function backToWork() {
 // whenever the pet is free.
 function showNotice() {
   if (busy || entering || runtime.state === 'hidden') return;
-  const { notice, more } = claude;
+  const { notice } = claude;
   if (!notice) {
     if (showingNotice()) hideBubble();
     noticeText = '';
     return;
   }
   const fresh = notice.id > noticeId;
-  const text = more ? `${notice.line}\n(${more} more waiting)` : notice.line;
+  const text = notice.extra ? `${notice.line}\n${notice.extra}` : notice.line;
   if (!fresh && (!showingNotice() || text === noticeText)) return;
   const before = fresh
     ? (balloonOpen && unread && content.text === unread ? `${unread}\n\n` : '')

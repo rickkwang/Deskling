@@ -158,7 +158,6 @@ export function makeCharacter({ name, id = idFromName(name || ''), description =
 // stands as a whole word.
 export function renamed(character, name) {
   const old = character.displayName;
-  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   const esc = old.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const word = new RegExp(`(?<![\\p{L}\\p{N}])${esc}(?![\\p{L}\\p{N}])`, 'gu');
   const swap = (v) => {
@@ -167,9 +166,11 @@ export function renamed(character, name) {
     if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, swap(x)]));
     return v;
   };
-  const description = character.description === defaultDescription(old) ? defaultDescription(name) : swap(character.description);
   // The importer builds the persona from the description it was given, or none.
   const from = ['', character.description].find((d) => same(character.persona, persona(old, d)));
+  // Who it is, in the user's words, is kept as written ("from Rick and Morty").
+  const description = character.description === defaultDescription(old) ? defaultDescription(name)
+    : from ? character.description : swap(character.description);
   return {
     ...character,
     displayName: name,
@@ -179,6 +180,23 @@ export function renamed(character, name) {
 }
 
 const defaultDescription = (name) => `${name}, a desktop pet made from a generated sprite sheet.`;
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+// Who the character is, in the user's words ('' when they gave none).
+export const aboutOf = (character) => (character.description === defaultDescription(character.displayName) ? '' : character.description);
+
+// Says who the character is: in its description and, so the model knows (a
+// name alone and it makes something up), its persona. A persona edited by
+// hand is left alone.
+export function described(character, about) {
+  const name = character.displayName;
+  const from = ['', character.description].find((d) => same(character.persona, persona(name, d)));
+  return {
+    ...character,
+    description: about || defaultDescription(name),
+    persona: from === undefined ? character.persona : persona(name, about),
+  };
+}
 
 function persona(name, description) {
   const who = description ? `${name}, ${description.replace(/\.$/, '')}` : name;

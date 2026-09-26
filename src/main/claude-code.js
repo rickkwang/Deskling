@@ -99,12 +99,20 @@ export function setHooks(on, file = claudeSettingsFile()) {
 
 // ---- sessions -----------------------------------------------------------------
 
-// The first line of Claude's last message, as plain text, for the balloon.
-export function summary(text, max = 140) {
+const clip = (text, max) => (text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text);
+
+// The first sentence of Claude's last message, as plain text, short enough
+// to read at a glance in the balloon.
+export function summary(text, max = 80) {
   const line = String(text || '').split('\n').map((l) => l.trim()).find((l) => l && !l.startsWith('```')) || '';
   const plain = line.replace(/^#+\s*|^[-*]\s+/, '').replace(/\*\*|__|`/g, '').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1');
-  return plain.length > max ? `${plain.slice(0, max - 1).trimEnd()}…` : plain;
+  const sentence = plain.match(/^.*?(?:[。！？!?]|\.(?=\s|$))/)?.[0] || plain;
+  // "Found it, two causes:" leads into a list; it reads as a sentence without the colon.
+  return clip((sentence.length >= 10 ? sentence : plain).replace(/\s*[:：]$/, ''), max);
 }
+
+// Whether the user writes to Claude in Chinese (the notices follow suit).
+const chinese = (text = '') => (text.match(/[\u4e00-\u9fff]/g) || []).length >= Math.max(1, (text.match(/\p{L}/gu) || []).length * 0.2);
 
 // Most urgent first. Within a kind, the newest.
 const RANK = { asking: 3, failed: 2, done: 1 };
@@ -112,22 +120,27 @@ const RANK = { asking: 3, failed: 2, done: 1 };
 export class ClaudeSessions {
   // onChange({ working, notice, more }) whenever the picture changes: whether
   // any session works, the notice that matters most ({ id, kind: 'asking' |
-  // 'failed' | 'done', project, text?, why?, terminal? }, or null) and how
+  // 'failed' | 'done', project, lang: 'en' | 'zh', text?, detail?, why?,
+  // terminal? }, or null; `detail` is more of Claude's reply) and how
   // many others wait behind it. Notices go away once seen: the session works
   // again, the user prompts it again, or dismiss().
   constructor({ onChange = () => {}, now = Date.now } = {}) {
     this.onChange = onChange;
     this.now = now;
-    // id -> { state: 'working' | 'asking' | 'idle' | 'stale', project, terminal, since (turn start), at (last event), notice }
+    // id -> { state: 'working' | 'asking' | 'idle' | 'stale', project, terminal, lang, since (turn start), at (last event), notice }
     this.sessions = new Map();
     this.ids = 0;
     this.last = JSON.stringify(this.status());
   }
 
+  // Every notice waiting to be seen, most urgent first.
+  notices() {
+    return [...this.sessions.values()].map((s) => s.notice).filter(Boolean).sort((a, b) => RANK[b.kind] - RANK[a.kind] || b.id - a.id);
+  }
+
   status() {
-    const all = [...this.sessions.values()];
-    const notices = all.map((s) => s.notice).filter(Boolean).sort((a, b) => RANK[b.kind] - RANK[a.kind] || b.id - a.id);
-    return { working: all.some((s) => s.state === 'working'), notice: notices[0] || null, more: Math.max(0, notices.length - 1) };
+    const notices = this.notices();
+    return { working: [...this.sessions.values()].some((s) => s.state === 'working'), notice: notices[0] || null, more: Math.max(0, notices.length - 1) };
   }
 
   handle(event) {
@@ -140,7 +153,8 @@ export class ClaudeSessions {
     const project = path.basename(event.cwd || '') || 'Claude Code';
     const s = { since: this.now(), notice: null, ...prev, project, terminal: event.terminal || prev?.terminal, at: this.now() };
     this.sessions.set(id, s);
-    const notify = (kind, more) => { s.notice = { id: ++this.ids, kind, project, terminal: s.terminal, ...more }; };
+    if (name === 'UserPromptSubmit' && event.prompt) s.lang = chinese(event.prompt) ? 'zh' : 'en';
+    const notify = (kind, more) => { s.notice = { id: ++this.ids, kind, project, lang: s.lang || 'en', terminal: s.terminal, ...more }; };
     const ask = (why) => { if (s.state !== 'asking') notify('asking', { why }); s.state = 'asking'; };
     if (name === 'UserPromptSubmit') Object.assign(s, { state: 'working', since: this.now(), notice: null }); // back at it: seen
     else if (name === 'PostToolUse' || (name === 'PreToolUse' && !ASKING_TOOLS.includes(event.tool_name))) {
@@ -154,7 +168,8 @@ export class ClaudeSessions {
       if (name === 'StopFailure') {
         if (inTurn) notify('failed', { text: summary(event.error_message || event.error_type) });
       } else if (inTurn && this.now() - s.since >= DONE_AFTER_MS) {
-        notify('done', { text: summary(event.last_assistant_message) });
+        const reply = String(event.last_assistant_message || '').trim();
+        notify('done', { text: summary(reply), detail: clip(reply, 600) });
       }
     } else if (name === 'SessionEnd') {
       // A done or failed notice outlives its session (claude -p ends at once).

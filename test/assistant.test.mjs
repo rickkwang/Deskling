@@ -47,6 +47,28 @@ test('the prompt says the assistant can only talk, not act', () => {
   assert.match(p, /Never offer or describe any other ability/);
 });
 
+test('with Work along on, the prompt knows about Claude Code notices, and only then', () => {
+  const a = new Assistant();
+  a.setBehavior({ responseStyle: 'normal', instructions: '' });
+  assert.match(a.systemPrompt('hi'), /The only other thing in the app is a focus timer/);
+  assert.doesNotMatch(a.systemPrompt('hi'), /Claude Code/);
+  a.setBehavior({ responseStyle: 'normal', instructions: '', claudeCode: true });
+  const p = a.systemPrompt('hi');
+  assert.match(p, /The only other things in the app are a focus timer .*, and Claude Code status\./);
+  assert.match(p, /You know only what those notices said/);
+  assert.match(p, /Never offer or describe any other ability/, 'the closing rule stays last');
+});
+
+test('a notice the pet gave stays in the conversation, apart from what the user typed', async () => {
+  const a = new Assistant();
+  a.told('Claude Code finished a task. Its last message began: "Fixed it."', 'Claude is done in app: Fixed it.');
+  assert.deepEqual(a.history.map((m) => m.role), ['user', 'assistant']);
+  assert.match(a.history[0].content, /^\[App event, not typed by the user\]/);
+  assert.equal(a.history[0].event, true);
+  for (let i = 0; i < 10; i++) a.told('e', 's');
+  assert.equal(a.history.length, 12, 'bounded like the rest');
+});
+
 test('with nothing typed yet, the system language is named', () => {
   assert.match(languageRule('', 'zh-CN'), /Reply in Chinese/);
   assert.match(languageRule('', 'en-US'), /Reply in English/);

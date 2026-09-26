@@ -13,9 +13,15 @@ const BASE_RULES = [
   // unless told what the whole of their ability is.
   'All you can do is chat in this balloon: answer questions, explain, give tips, and write, rewrite or translate text the user types.',
   'You cannot receive files or drag-and-drop, and you cannot send email or messages, open apps or files, see the screen, browse the web, set reminders, or change anything on the computer.',
-  'The only other thing in the app is a focus timer (Pomodoro), which the user starts by right-clicking you and choosing Focus Timer; you cannot start, stop or change it yourself.',
-  'Never offer or describe any other ability, and never claim to have done something; instead write the text for the user to use, or tell them the steps to do it themselves.',
 ].join(' ');
+const TIMER = 'a focus timer (Pomodoro), which the user starts by right-clicking you and choosing Focus Timer; you cannot start, stop or change it yourself';
+// Settings > Behavior > Claude Code > Work along. Without this the model
+// denies knowing about the notices it just gave.
+const CLAUDE_CODE = 'While the user\'s Claude Code (an AI coding assistant in their terminal) works, you play a busy animation, but you can still chat as usual. You tell them when it is done, needs their permission or answer, or stopped with an error, and clicking your notice brings their terminal forward. You know only what those notices said; you cannot see their code, files or terminal, and you cannot tell Claude anything.';
+const LAST_RULE = 'Never offer or describe any other ability, and never claim to have done something; instead write the text for the user to use, or tell them the steps to do it themselves.';
+const baseRules = (claudeCode) => `${BASE_RULES} ${claudeCode
+  ? `The only other things in the app are ${TIMER}, and Claude Code status. ${CLAUDE_CODE}`
+  : `The only other thing in the app is ${TIMER}.`} ${LAST_RULE}`;
 // Last, closest to the reply, where small models follow it most reliably.
 // Small models drift into English under an English system prompt, so a
 // language that can be told from its script is named outright.
@@ -66,7 +72,7 @@ export class Assistant {
     this.model = null;
     this.status = { available: false };
     this.persona = null;
-    this.behavior = { responseStyle: 'normal', instructions: '' };
+    this.behavior = { responseStyle: 'normal', instructions: '', claudeCode: false };
     this.history = [];
     this.abort = null;
   }
@@ -93,16 +99,17 @@ export class Assistant {
     this.model = this.provider.pickModel(this.models, name);
   }
 
-  setBehavior({ responseStyle, instructions }) {
+  setBehavior({ responseStyle, instructions, claudeCode = false }) {
     this.behavior = {
       responseStyle: RESPONSE_STYLES[responseStyle] ? responseStyle : 'normal',
       instructions: String(instructions || '').slice(0, MAX_INSTRUCTIONS).trim(),
+      claudeCode: Boolean(claudeCode),
     };
   }
 
   systemPrompt(text = '', locale = '') {
     const style = RESPONSE_STYLES[this.behavior.responseStyle];
-    const parts = [this.persona?.systemPrompt || '', BASE_RULES, style.prompt];
+    const parts = [this.persona?.systemPrompt || '', baseRules(this.behavior.claudeCode), style.prompt];
     if (this.behavior.instructions) {
       parts.push(`The user's standing instructions (follow them unless they conflict with the rules above): ${this.behavior.instructions}`);
     }
@@ -145,6 +152,13 @@ export class Assistant {
     this.history = this.history.slice(-MAX_HISTORY);
     this.abort = null;
     return reply;
+  }
+
+  // Something the pet said on its own about an app event (a Claude Code
+  // notice), kept in history so the user can ask about it.
+  told(event, said) {
+    this.history.push({ role: 'user', content: `[App event, not typed by the user] ${event}`, event: true }, { role: 'assistant', content: said });
+    this.history = this.history.slice(-MAX_HISTORY);
   }
 
   // One line in character about something that happened in the app (a timer

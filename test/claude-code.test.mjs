@@ -24,7 +24,7 @@ test('a turn works, then shows it is done until the user comes back to it', () =
   assert.deepEqual(changes, [{ working: true, notice: null, more: 0 }], 'one change for the whole turn');
   send('Stop', { last_assistant_message: '**Added** the `hooks` and [tests](x.md).\n\nMore detail.' });
   assert.equal(sessions.status().working, false);
-  assert.deepEqual(notice(), { id: 1, kind: 'done', project: 'deskling', terminal: 'com.mitchellh.ghostty', text: 'Added the hooks and tests.' });
+  assert.deepEqual(notice(), { id: 1, kind: 'done', project: 'deskling', lang: 'en', terminal: 'com.mitchellh.ghostty', text: 'Added the hooks and tests.', detail: '**Added** the `hooks` and [tests](x.md).\n\nMore detail.' });
   send('UserPromptSubmit');
   assert.equal(notice(), null, 'prompting the session again means it was seen');
 });
@@ -58,6 +58,20 @@ test('waiting for an answer shows once, and goes away when answered', () => {
   assert.equal(notice().why, 'question', 'idle prompts are not news');
   send('Stop');
   assert.equal(notice(), null, 'a turn that ends quickly after a question leaves nothing');
+});
+
+test('notices follow the language the user writes to Claude in', () => {
+  const { send, notice, advance } = setup();
+  send('UserPromptSubmit', { prompt: '帮我修一下这个 bug' });
+  send('PermissionRequest');
+  assert.equal(notice().lang, 'zh');
+  send('UserPromptSubmit', { prompt: 'fix the tests please' });
+  advance(DONE_AFTER_MS);
+  send('Stop', { last_assistant_message: 'Done.' });
+  assert.equal(notice().lang, 'en');
+  send('UserPromptSubmit', {});
+  send('StopFailure', { error_message: 'x' });
+  assert.equal(notice().lang, 'en', 'a prompt-less event keeps the last language');
 });
 
 test('the most urgent notice shows first, with a count of the rest', () => {
@@ -121,7 +135,11 @@ test('summary: first real line, plain, capped', () => {
   assert.equal(summary('```js\ncode\n```'), 'code');
   assert.equal(summary('## Done\nrest'), 'Done');
   assert.equal(summary(''), '');
-  assert.equal(summary('x'.repeat(200)).length, 140);
+  assert.equal(summary('x'.repeat(200)).length, 80);
+  assert.equal(summary('找到原因了，有两个，都不是版本问题：\n1. 其一'), '找到原因了，有两个，都不是版本问题', 'a colon leading into a list goes');
+  assert.equal(summary('上次提出的 8 个问题都已修好，又发现了 3 个。改动还没提交。'), '上次提出的 8 个问题都已修好，又发现了 3 个。', 'the first sentence only');
+  assert.equal(summary('Shipped v0.3. Next: docs.'), 'Shipped v0.3.', 'a version number is not a sentence end');
+  assert.equal(summary('Done. More here.'), 'Done. More here.', 'too short a sentence keeps the line');
 });
 
 test('hooks go in once, leave other hooks alone, and come out cleanly', () => {

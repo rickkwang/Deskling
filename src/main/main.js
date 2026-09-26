@@ -9,7 +9,7 @@ import { FocusTimer, LIMITS, validSeconds, PRESETS, SOUNDS, duration, minutesLef
 import { checkForUpdate, prepareInstall, releasePage } from './updater.js';
 import { ClaudeSessions, claudeSettingsFile, hooksInstalled, listen, readClaudeSettings, setHooks } from './claude-code.js';
 import { decodePng, encodePng } from '../character/png-codec.js';
-import { cutSheet, idFromName, makeCharacter, renamed } from '../character/sheet-import.js';
+import { aboutOf, cutSheet, described, idFromName, makeCharacter, renamed } from '../character/sheet-import.js';
 import { SHEET_PROMPT } from '../character/sheet-prompt.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -149,7 +149,7 @@ function characterCard(entry) {
   return {
     id: data.id, displayName: data.displayName, description: data.description,
     sheetUrl: sheetUrl(entry.dir, data.spritesheet.path),
-    cell, cellWidth, cellHeight, custom: isCustom(entry),
+    cell, cellWidth, cellHeight, custom: isCustom(entry), about: aboutOf(data),
   };
 }
 
@@ -426,6 +426,7 @@ let pendingSheet = null; // { png, cellWidth, cellHeight } of a cut sheet waitin
 const MAX_SHEET_WIDTH = 2048;
 
 const cleanName = (name) => String(name ?? '').replace(/\s+/g, ' ').trim().slice(0, 30);
+const cleanAbout = (about) => String(about ?? '').replace(/\s+/g, ' ').trim().slice(0, 120);
 
 function readImage(file) {
   let img = nativeImage.createFromPath(file); // PNG (any depth), JPEG
@@ -468,7 +469,7 @@ function prepareSheet(file) {
   }
 }
 
-function addCharacter(rawName) {
+function addCharacter(rawName, rawAbout) {
   const name = cleanName(rawName);
   if (!pendingSheet || !name) return { error: 'Choose an image and give the character a name.' };
   const taken = new Set(listCharacters().map((c) => c.id));
@@ -480,7 +481,7 @@ function addCharacter(rawName) {
   try {
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, 'spritesheet.png'), png);
-    writeCharacter(dir, makeCharacter({ name, id, cellWidth, cellHeight }));
+    writeCharacter(dir, makeCharacter({ name, id, cellWidth, cellHeight, description: cleanAbout(rawAbout) }));
   } catch (e) {
     fs.rmSync(dir, { recursive: true, force: true });
     return { error: `Couldn’t save the character: ${e.message}` };
@@ -495,11 +496,19 @@ const writeCharacter = (dir, data) => fs.writeFileSync(path.join(dir, 'character
 const customEntry = (id) => listCharacters().find((c) => c.id === id && isCustom(c));
 
 function renameCharacter(id, rawName) {
-  const entry = customEntry(id);
   const name = cleanName(rawName);
-  if (!entry || !name) return;
+  if (name) changeCharacter(id, (c) => renamed(c, name));
+}
+
+function describeCharacter(id, about) {
+  changeCharacter(id, (c) => described(c, cleanAbout(about)));
+}
+
+function changeCharacter(id, change) {
+  const entry = customEntry(id);
+  if (!entry) return;
   const file = path.join(entry.dir, 'character.json');
-  writeCharacter(entry.dir, renamed(JSON.parse(fs.readFileSync(file, 'utf8')), name));
+  writeCharacter(entry.dir, change(JSON.parse(fs.readFileSync(file, 'utf8'))));
   charactersChanged();
   // The pet keeps going (no goodbye and hello, the conversation stays); only
   // its name and persona change.
@@ -554,8 +563,8 @@ function updateSettings(patch) {
   if (patch.character && patch.character !== prev.character) switchCharacter(patch.character);
   Object.assign(settings, patch);
   if (patch.model !== undefined) assistant.setModel(settings.model);
-  if (patch.responseStyle !== undefined || patch.instructions !== undefined) {
-    assistant.setBehavior({ responseStyle: settings.responseStyle, instructions: settings.instructions });
+  if (patch.responseStyle !== undefined || patch.instructions !== undefined || patch.claudeCode !== undefined) {
+    assistant.setBehavior({ responseStyle: settings.responseStyle, instructions: settings.instructions, claudeCode: settings.claudeCode });
   }
   if (patch.balloon !== undefined && patch.balloon !== prev.balloon) {
     sendBalloonTheme();
@@ -783,22 +792,53 @@ function timerMenu() {
 const claude = {
   server: null,
   error: '', // why the last connect failed, for Settings
-  sessions: new ClaudeSessions({ onChange: () => sendClaudeStatus() }),
+  sessions: new ClaudeSessions({ onChange: () => { tellAssistant(); sendClaudeStatus(); } }),
+  told: 0, // the newest notice put in the conversation
 };
 setInterval(() => claude.sessions.sweep(), 60_000);
 
 const home = (p) => p.replace(app.getPath('home'), '~');
 
+// What the pet says, in the language the user writes to Claude in.
+const NOTICE_LINES = {
+  en: {
+    done: (p, t) => `Claude is done in ${p}${t ? `: ${t}` : '.'}`,
+    question: (p) => `Claude has a question for you in ${p}.`,
+    permission: (p) => `Claude needs your OK in ${p}.`,
+    failed: (p, t) => `Claude stopped with an error in ${p}${t ? `: ${t}` : '.'}`,
+    more: (n) => `(${n} more waiting)`,
+  },
+  zh: {
+    done: (p, t) => `Claude 在 ${p} 做完了${t ? `：${t}` : '。'}`,
+    question: (p) => `Claude 在 ${p} 有问题要问你。`,
+    permission: (p) => `Claude 在 ${p} 需要你批准。`,
+    failed: (p, t) => `Claude 在 ${p} 出错停下了${t ? `：${t}` : '。'}`,
+    more: (n) => `（还有 ${n} 条）`,
+  },
+};
+const lines = (n) => NOTICE_LINES[n.lang] || NOTICE_LINES.en;
+const noticeLine = (n) => lines(n)[n.kind === 'asking' ? n.why : n.kind](n.project, n.text);
+
 // The status with the notice written out for the balloon.
 function claudeStatus() {
   const { working, notice: n, more } = claude.sessions.status();
   if (!n) return { working, notice: null, more };
-  const line = {
-    done: `Claude is done in ${n.project}${n.text ? `: ${n.text}` : '.'}`,
-    asking: n.why === 'question' ? `Claude has a question for you in ${n.project}.` : `Claude needs your OK in ${n.project}.`,
-    failed: `Claude stopped with an error in ${n.project}${n.text ? `: ${n.text}` : '.'}`,
-  }[n.kind];
-  return { working, notice: { id: n.id, kind: n.kind, line, terminal: Boolean(n.terminal) }, more };
+  return { working, notice: { id: n.id, kind: n.kind, line: noticeLine(n), extra: more ? lines(n).more(more) : '', terminal: Boolean(n.terminal) }, more };
+}
+
+// Each new notice goes into the conversation, with more of Claude's reply
+// than the balloon shows, so "what did it do?" gets an answer.
+function tellAssistant() {
+  for (const n of claude.sessions.notices().filter((x) => x.id > claude.told).reverse()) {
+    const where = `in the project "${n.project}"`;
+    const event = {
+      done: `Claude Code finished a task ${where}. Its last message began: "${n.detail || n.text}"`,
+      asking: `Claude Code is waiting for the user's ${n.why === 'question' ? 'answer to a question' : 'permission'} ${where}.`,
+      failed: `Claude Code stopped with an error ${where}: ${n.text || 'unknown error'}.`,
+    }[n.kind];
+    assistant.told(event, noticeLine(n));
+    claude.told = Math.max(claude.told, n.id);
+  }
 }
 
 function sendClaudeStatus() {
@@ -968,7 +1008,7 @@ function registerIpc() {
     }
     const character = loadCharacter(settings.character);
     assistant.setPersona(character.data.persona);
-    assistant.setBehavior({ responseStyle: settings.responseStyle, instructions: settings.instructions });
+    assistant.setBehavior({ responseStyle: settings.responseStyle, instructions: settings.instructions, claudeCode: settings.claudeCode });
     const ai = await assistant.refresh(settings.model);
     return { character, ai, settings: publicSettings(), selftest: SELFTEST && { quiet: process.argv.includes('--quiet'), edge: process.argv.includes('--edge') || process.argv.includes('--edge-open'), edgeOpen: process.argv.includes('--edge-open'), hold: Number(arg('hold') || 2500) } };
   });
@@ -1042,9 +1082,10 @@ function registerIpc() {
   ipcMain.on('settings:set', (_e, patch) => updateSettings(patch));
   ipcMain.handle('characters:choose', () => chooseSheet());
   ipcMain.handle('characters:prepare', (_e, file) => prepareSheet(file));
-  ipcMain.handle('characters:add', (_e, name) => addCharacter(name));
+  ipcMain.handle('characters:add', (_e, name, about) => addCharacter(name, about));
   ipcMain.on('characters:cancel', () => { pendingSheet = null; });
   ipcMain.on('characters:rename', (_e, id, name) => renameCharacter(id, name));
+  ipcMain.on('characters:describe', (_e, id, about) => describeCharacter(id, about));
   ipcMain.handle('characters:delete', (_e, id) => deleteCharacter(id));
   ipcMain.on('characters:copy-prompt', () => clipboard.writeText(SHEET_PROMPT));
   ipcMain.on('settings:fit', (_e, { height, extra }) => {

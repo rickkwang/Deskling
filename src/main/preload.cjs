@@ -66,9 +66,10 @@ contextBridge.exposeInMainWorld('pet', {
   characters: {
     choose: () => ipcRenderer.invoke('characters:choose'),
     prepare: (file) => ipcRenderer.invoke('characters:prepare', file),
-    add: (name) => ipcRenderer.invoke('characters:add', name),
+    add: (name, about) => ipcRenderer.invoke('characters:add', name, about),
     cancel: () => ipcRenderer.send('characters:cancel'),
     rename: (id, name) => ipcRenderer.send('characters:rename', id, name),
+    describe: (id, about) => ipcRenderer.send('characters:describe', id, about),
     remove: (id) => ipcRenderer.invoke('characters:delete', id),
     copyPrompt: () => ipcRenderer.send('characters:copy-prompt'),
     onChange: on('settings:characters'),

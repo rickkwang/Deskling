@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { decodePng, encodePng } from '../src/character/png-codec.js';
-import { importSheet, makeCharacter, renamed, SHEET_COLUMNS, SHEET_ROWS } from '../src/character/sheet-import.js';
+import { aboutOf, described, importSheet, makeCharacter, renamed, SHEET_COLUMNS, SHEET_ROWS } from '../src/character/sheet-import.js';
 import { validateCharacter } from '../src/character/validate.js';
 import { exitNext } from '../src/character/exit.js';
 
@@ -103,6 +103,21 @@ test('a sheet drawn on transparency imports without keying', () => {
   }
   const { character, sheet } = importSheet(img, { name: 'Clear' });
   assert.deepEqual(validateCharacter(character, { sheetSize: sheet }).errors, []);
+});
+
+test('saying who a character is reaches its persona, and can be taken back', () => {
+  const c = makeCharacter({ name: 'Rick', id: 'rick', cellWidth: 1, cellHeight: 1 });
+  assert.equal(aboutOf(c), '');
+  const d = described(c, 'a mad scientist from Rick and Morty');
+  assert.equal(aboutOf(d), 'a mad scientist from Rick and Morty');
+  assert.match(d.persona.systemPrompt, /^You are Rick, a mad scientist from Rick and Morty\. /);
+  assert.deepEqual(d.persona, makeCharacter({ name: 'Rick', id: 'r', cellWidth: 1, cellHeight: 1, description: 'a mad scientist from Rick and Morty' }).persona);
+  assert.deepEqual(described(d, ''), c, 'empty goes back to the default');
+  const r = renamed(d, 'Morty');
+  assert.equal(r.persona.systemPrompt.split('.')[0], 'You are Morty, a mad scientist from Rick and Morty', 'survives a rename, as written');
+  assert.equal(aboutOf(r), 'a mad scientist from Rick and Morty');
+  const edited = { ...c, persona: { ...c.persona, systemPrompt: 'Hand-written.' } };
+  assert.equal(described(edited, 'x').persona.systemPrompt, 'Hand-written.', 'a hand-edited persona is left alone');
 });
 
 test('renaming rewrites generated text and swaps only whole words elsewhere', () => {

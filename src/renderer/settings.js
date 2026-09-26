@@ -155,7 +155,7 @@ window.pet.characters.onChange((list) => {
 // The card under the grid: naming a new character, or renaming / deleting the
 // selected custom one. Bundled characters have no card.
 const custom = {
-  card: $('#custom'), thumb: $('#custom-thumb'), name: $('#custom-name'), note: $('#custom-note'),
+  card: $('#custom'), thumb: $('#custom-thumb'), name: $('#custom-name'), about: $('#custom-about'), note: $('#custom-note'),
   primary: $('#custom-primary'), secondary: $('#custom-secondary'),
 };
 // While adding: { busy } as the image is cut, { preview, warnings } waiting
@@ -167,6 +167,7 @@ async function pickSheet() {
   if (!file) return;
   adding = { busy: true };
   custom.name.value = '';
+  custom.about.value = '';
   render();
   fitWindow();
   // Let "Preparing…" paint before main spends a moment cutting the sheet.
@@ -188,7 +189,7 @@ async function confirmAdd() {
   const name = custom.name.value.trim();
   if (!name) return custom.name.focus();
   custom.primary.disabled = true;
-  const result = await window.pet.characters.add(name);
+  const result = await window.pet.characters.add(name, custom.about.value.trim());
   if (result?.id) {
     adding = null;
     fitWindow();
@@ -209,6 +210,16 @@ custom.name.addEventListener('input', () => { if (adding?.preview) custom.primar
 custom.name.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') { e.preventDefault(); if (adding?.preview) confirmAdd(); else custom.name.blur(); }
   if (e.key === 'Escape') { e.preventDefault(); if (adding) stopAdding(); else { custom.name.value = currentCard()?.displayName || ''; custom.name.blur(); } }
+});
+// Who it is: the model is told, so the character knows itself.
+custom.about.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); if (adding?.preview) confirmAdd(); else custom.about.blur(); }
+  if (e.key === 'Escape') { e.preventDefault(); if (adding) stopAdding(); else { custom.about.value = currentCard()?.about || ''; custom.about.blur(); } }
+});
+custom.about.addEventListener('change', () => {
+  const card = currentCard();
+  const about = custom.about.value.trim();
+  if (!adding && card?.custom && about !== card.about) window.pet.characters.describe(card.id, about);
 });
 custom.name.addEventListener('change', () => {
   const card = currentCard();
@@ -234,6 +245,7 @@ function renderCustom() {
   custom.card.classList.toggle('failed', failed);
   custom.card.classList.toggle('busy', Boolean(adding?.busy));
   custom.name.hidden = failed || Boolean(adding?.busy);
+  custom.about.hidden = custom.name.hidden;
   custom.secondary.hidden = !adding || Boolean(adding.busy);
   custom.primary.classList.toggle('danger', !adding);
   custom.note.classList.toggle('warn', Boolean(adding?.saveError || adding?.warnings?.length));
@@ -258,6 +270,7 @@ function renderCustom() {
   } else {
     custom.thumb.replaceChildren(sprite(card, { w: 52, h: 48 }));
     if (document.activeElement !== custom.name) custom.name.value = card.displayName;
+    if (document.activeElement !== custom.about) custom.about.value = card.about || '';
     custom.note.textContent = 'Your character · click the name to rename';
     custom.primary.textContent = 'Delete…';
     custom.primary.disabled = false;
@@ -357,7 +370,7 @@ function renderClaude() {
   note.classList.toggle('warn', Boolean(claude.error || broken));
   note.textContent = claude.error
     || (broken ? `Its hooks are missing from ${claude.file}.` : 'Busy while Claude Code works; speaks up when it’s done or needs you');
-  help.replaceChildren(`Adds hooks to ${claude.file} (backed up first). New Claude Code sessions pick them up.`);
+  help.replaceChildren(`Adds hooks to ${claude.file} (backed up first). Claude Code picks them up right away.`);
   if (broken && !claude.error) {
     const fix = document.createElement('button');
     fix.type = 'button';
