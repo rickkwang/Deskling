@@ -826,18 +826,15 @@ function claudeStatus() {
   return { working, notice: { id: n.id, kind: n.kind, line: noticeLine(n), extra: more ? lines(n).more(more) : '', terminal: Boolean(n.terminal) }, more };
 }
 
-// Each new notice goes into the conversation, with more of Claude's reply
-// than the balloon shows, so "what did it do?" gets an answer.
+// Each new done or failed notice goes into the conversation, with more of
+// Claude's reply than the balloon shows, so "what did it do?" gets an answer.
+// (Waiting for the user has nothing more to tell.)
 function tellAssistant() {
   for (const n of claude.sessions.notices().filter((x) => x.id > claude.told).reverse()) {
-    const where = `in the project "${n.project}"`;
-    const event = {
-      done: `Claude Code finished a task ${where}. Its last message began: "${n.detail || n.text}"`,
-      asking: `Claude Code is waiting for the user's ${n.why === 'question' ? 'answer to a question' : 'permission'} ${where}.`,
-      failed: `Claude Code stopped with an error ${where}: ${n.text || 'unknown error'}.`,
-    }[n.kind];
-    assistant.told(event, noticeLine(n));
     claude.told = Math.max(claude.told, n.id);
+    const where = `in the project "${n.project}"`;
+    if (n.kind === 'done') assistant.told(`Claude Code finished a task ${where}. Its last message began: "${n.detail || n.text}"`, noticeLine(n));
+    else if (n.kind === 'failed') assistant.told(`Claude Code stopped with an error ${where}: ${n.text || 'unknown error'}.`, noticeLine(n));
   }
 }
 

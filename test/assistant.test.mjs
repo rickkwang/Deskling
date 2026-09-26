@@ -65,8 +65,10 @@ test('a notice the pet gave stays in the conversation, apart from what the user 
   assert.deepEqual(a.history.map((m) => m.role), ['user', 'assistant']);
   assert.match(a.history[0].content, /^\[App event, not typed by the user\]/);
   assert.equal(a.history[0].event, true);
-  for (let i = 0; i < 10; i++) a.told('e', 's');
-  assert.equal(a.history.length, 12, 'bounded like the rest');
+  a.history.push({ role: 'user', content: 'hi' }, { role: 'assistant', content: 'hello' });
+  for (let i = 0; i < 10; i++) a.told(`e${i}`, `s${i}`);
+  assert.deepEqual(a.history.filter((m) => !m.told).map((m) => m.content), ['hi', 'hello'], "a day of notices leaves the user's chat alone");
+  assert.deepEqual(a.history.filter((m) => m.role === 'assistant' && m.told).map((m) => m.content), ['s8', 's9'], 'only the latest two stay');
 });
 
 test('with nothing typed yet, the system language is named', () => {

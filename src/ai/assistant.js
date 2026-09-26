@@ -155,9 +155,15 @@ export class Assistant {
   }
 
   // Something the pet said on its own about an app event (a Claude Code
-  // notice), kept in history so the user can ask about it.
-  told(event, said) {
-    this.history.push({ role: 'user', content: `[App event, not typed by the user] ${event}`, event: true }, { role: 'assistant', content: said });
+  // notice), kept in history so the user can ask about it. Only the latest
+  // few stay, so a day of notices never pushes the user's own chat out.
+  told(event, said, keep = 2) {
+    const pairs = this.history.filter((m) => m.told).length / 2;
+    if (pairs >= keep) {
+      const oldest = this.history.findIndex((m) => m.told);
+      this.history.splice(oldest, 2);
+    }
+    this.history.push({ role: 'user', content: `[App event, not typed by the user] ${event}`, event: true, told: true }, { role: 'assistant', content: said, told: true });
     this.history = this.history.slice(-MAX_HISTORY);
   }
 
