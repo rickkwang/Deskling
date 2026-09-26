@@ -1,3 +1,5 @@
+**Fixed in 0.3.1:** after you click the pet, it goes back to working along with Claude Code as soon as you switch to another app (it used to wait until you closed its balloon). It also keeps only the latest Claude Code notices in its chat, so it no longer forgets your own conversation.
+
 **New in 0.3.0: your pet works along with Claude Code.** Turn it on in **Assistant Settings → Behavior → Claude Code → Work along**. While a Claude Code session works, the pet works too. When Claude needs your OK or an answer, stops with an error, or finishes a longer task, the pet says so in its balloon; click the balloon to jump back to your terminal, or ask the pet what Claude did. The switch adds a few hooks to `~/.claude/settings.json` (backed up first); turn it off to remove them.
 
 Custom characters can now say who they are (under their name in **Character**), so the pet introduces itself as that character instead of making something up.
