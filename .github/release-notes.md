@@ -1,4 +1,6 @@
-**New in 0.2.0: make your own character.** In **Assistant Settings → Character**, click **copy the prompt**, have an image model (such as ChatGPT) draw the sprite sheet, then choose **Add…** and pick the image. Name it and it's ready: it moves, thinks, talks and dozes off like the Office assistants. Click a custom character's name to rename it, or delete it when you're done with it.
+**New in 0.3.0: your pet works along with Claude Code.** Turn it on in **Assistant Settings → Behavior → Claude Code → Work along**. While a Claude Code session works, the pet works too. When Claude needs your OK or an answer, stops with an error, or finishes a longer task, the pet says so in its balloon; click the balloon to jump back to your terminal, or ask the pet what Claude did. The switch adds a few hooks to `~/.claude/settings.json` (backed up first); turn it off to remove them.
+
+Custom characters can now say who they are (under their name in **Character**), so the pet introduces itself as that character instead of making something up.
 
 Download **Deskling-…-arm64.dmg** (Apple silicon Macs), open it and drag Deskling to Applications.
 

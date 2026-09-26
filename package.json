@@ -1,7 +1,7 @@
 {
   "name": "deskling",
   "productName": "Deskling",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A little creature that lives on your desktop and helps out: Microsoft Agent characters, local Ollama brain.",
   "type": "module",
   "main": "src/main/main.js",
