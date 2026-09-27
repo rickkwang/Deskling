@@ -20,6 +20,5 @@ Each theme follows its platform's own documentation or measurements:
   ([FindersKeepers](https://www.pentacom.jp/pentacom/bitfontmaker2/gallery/?id=3809),
   [ChiKareGo2](https://www.pentacom.jp/pentacom/bitfontmaker2/gallery/?id=3780)).
   The .woff2 files are taken from [system.css](https://github.com/sakofchit/system.css).
-- `fonts/ms_sans_serif.woff2`, `fonts/ms_sans_serif_bold.woff2` (MS Sans Serif
-  8 pt, pixel recreation) and `win98/scroll-up.svg`, `win98/scroll-down.svg`: from 98.css,
+- `win98/scroll-up.svg`, `win98/scroll-down.svg`: from 98.css,
   Copyright (c) 2020 Jordan Scales, MIT License.
