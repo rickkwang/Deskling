@@ -6,16 +6,16 @@
   src: url("balloon-themes/fonts/FindersKeepers.woff2") format("woff2");
 }
 
-/* Classic: the pale yellow note with a dark outline. */
+/* Classic: the Office Assistant balloon's tooltip yellow and black outline. */
 [data-theme="classic"] {
-  --pill-bg: #fbefc2;
-  --pill-hover: #f7e7ad;
-  --pill-ink: #1f1d17;
-  --pill-edge: 1px solid #2e2b22;
+  --pill-bg: #ffffe1;
+  --pill-hover: #ffffc4;
+  --pill-ink: #000;
+  --pill-edge: 1px solid #000;
   --pill-radius: 10px;
-  --pill-shadow: 1.5px 2px 0 rgba(0, 0, 0, 0.16), 0 3px 3px rgba(0, 0, 0, 0.1);
-  --pill-font: 600 11px/1 Geneva, "Lucida Grande", "PingFang SC", -apple-system, sans-serif;
-  --pill-track: rgba(60, 50, 20, 0.18);
+  --pill-shadow: none;
+  --pill-font: bold 11px/1 Tahoma, "PingFang SC", sans-serif;
+  --pill-track: rgba(0, 0, 0, 0.15);
   --pill-focus-color: #c2532f;
   --pill-break-color: #5d8a3a;
   --pill-focus: #2e2b22;

@@ -393,12 +393,12 @@ input[type="range"]:focus-visible::-webkit-slider-thumb { outline: 2px solid var
   transform: rotate(45deg);
 }
 .mini-classic {
-  --mini-bg: #fbefc2;
-  --mini-edge: #2e2b22;
+  --mini-bg: #ffffe1;
+  --mini-edge: #000;
   --mini-radius: 6px;
-  --mini-shadow: 1px 1.5px 0 rgba(0, 0, 0, 0.16);
-  --mini-font: Geneva, sans-serif;
-  color: #1f1d17;
+  --mini-shadow: none;
+  --mini-font: Tahoma, sans-serif;
+  color: #000;
 }
 .mini-aqua {
   --mini-bg:

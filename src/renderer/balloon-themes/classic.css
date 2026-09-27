@@ -1,26 +1,50 @@
-/* Classic: the original balloon, a pale yellow note with a dark outline. */
+/* Classic: the Office 97/2000 Assistant balloon, as in the "What would you
+   like to do?" balloon: the tooltip yellow (Windows InfoBackground, 255 255
+   225), a one-pixel black outline with rounded corners, no shadow, and
+   Tahoma 8 pt. The question goes in a sunken white field and "Search" is a
+   standard grey push button (bevels as in the Windows 98 theme). */
 [data-theme="classic"] {
-  --font: 12px/1.42 Geneva, "Lucida Grande", "PingFang SC", -apple-system, sans-serif;
-  --paper: #fbefc2;
-  --ink: #1f1d17;
-  --edge: #2e2b22;
-  --rule: #ddd0a0;
-  --hint: #9b937a;
-  --error: #6b2b12;
+  --font: 11px/1.45 Tahoma, "Microsoft Sans Serif", "PingFang SC", sans-serif;
+  --paper: #ffffe1;
+  --ink: #000;
+  --edge: #000;
+  --rule: transparent;
+  --hint: #808080;
+  --error: #800000;
   --radius: 9;
   --tail-shape: straight;
-  --shadow-blur: 3;
+  --shadow-blur: 0;
 }
 [data-theme="classic"] #shape .fill { fill: var(--paper); }
 [data-theme="classic"] #shape .rim { stroke: var(--edge); }
-[data-theme="classic"] #shape .shadow-hard { fill: rgba(0, 0, 0, 0.16); transform: translate(1.5px, 2px); }
-[data-theme="classic"] #shape .shadow-soft { fill: rgba(0, 0, 0, 0.14); transform: translate(0, 3px); }
 
-[data-theme="classic"] #send {
-  border-radius: 50%;
-  background: rgba(60, 50, 20, 0.07);
-  color: rgba(60, 50, 20, 0.32);
-  transition: background 120ms, color 120ms;
+[data-theme="classic"] ::selection { background: #000080; color: #fff; }
+
+[data-theme="classic"] #msg { padding: 10px 12px 4px; }
+
+[data-theme="classic"] #ask { gap: 6px; padding: 6px 10px 10px 11px; border-top: 0; }
+
+/* Sunken white field. */
+[data-theme="classic"] #input {
+  height: 21px;
+  background: #fff;
+  padding: 3px 4px;
+  box-shadow: inset -1px -1px #fff, inset 1px 1px #808080, inset -2px -2px #dfdfdf, inset 2px 2px #0a0a0a;
 }
-[data-theme="classic"] #send:not(:disabled) { background: var(--edge); color: var(--paper); }
-[data-theme="classic"] #send:not(:disabled):active { transform: translateY(1px); }
+
+/* Raised grey push button, 75 × 23. */
+[data-theme="classic"] #send {
+  width: 75px;
+  height: 23px;
+  font: inherit;
+  background: #c0c0c0;
+  color: #000;
+  box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf;
+}
+[data-theme="classic"] .send-icon { display: none; }
+[data-theme="classic"] .send-label { display: block; }
+[data-theme="classic"] #send:disabled { color: #808080; text-shadow: 1px 1px #fff; }
+[data-theme="classic"] #send:not(:disabled):active {
+  box-shadow: inset -1px -1px #fff, inset 1px 1px #0a0a0a, inset -2px -2px #dfdfdf, inset 2px 2px #808080;
+}
+[data-theme="classic"] #send:not(:disabled):active .send-label { transform: translate(1px, 1px); }
