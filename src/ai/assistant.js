@@ -18,7 +18,8 @@ const TIMER = 'a focus timer (Pomodoro), which the user starts by right-clicking
 // Settings > Behavior > Claude Code > Work along. Without this the model
 // denies knowing about the notices it just gave.
 const CLAUDE_CODE = 'While the user\'s Claude Code (an AI coding assistant in their terminal) works, you play a busy animation, but you can still chat as usual. You tell them when it is done, needs their permission or answer, or stopped with an error, and clicking your notice brings their terminal forward. You know only what those notices said; you cannot see their code, files or terminal, and you cannot tell Claude anything.';
-const LAST_RULE = 'Never offer or describe any other ability, and never claim to have done something; instead write the text for the user to use, or tell them the steps to do it themselves.';
+// Small models otherwise recite the limits above in every reply, even a joke.
+const LAST_RULE = 'Never offer or describe any other ability, and never claim to have done something; instead write the text for the user to use, or tell them the steps to do it themselves. These limits are background for you, not something to announce: mention one only when the user asks for something that needs it or asks what you can do. Otherwise just do what they asked, staying in character: a joke request gets just the joke, and a greeting gets a short friendly greeting back, not a list of what you can or cannot do.';
 const baseRules = (claudeCode) => `${BASE_RULES} ${claudeCode
   ? `The only other things in the app are ${TIMER}, and Claude Code status. ${CLAUDE_CODE}`
   : `The only other thing in the app is ${TIMER}.`} ${LAST_RULE}`;
@@ -47,18 +48,22 @@ export function languageRule(text, locale = '') {
 }
 
 // Response Style options shown in Assistant Settings. Each sets the reply's
-// length, as a concrete target (small local models follow numbers far better
-// than "brief"); the tone styles answer at Normal length.
+// length for a real question as a concrete target (small local models follow
+// numbers far better than "brief"); the tone styles answer at Normal length.
+// SHORT keeps them from padding a greeting or a joke out to that count.
 const LENGTH = 'this overrides any other note about length';
-const NORMAL = `Length: about 3 to 5 sentences, enough to actually answer, with a concrete tip or example where it helps (${LENGTH}).`;
+const SHORT = 'A greeting, thanks, small talk or a joke gets only a sentence or two (a joke is just the joke), whatever the length below.';
+const NORMAL = `${SHORT} Length: for a real question, about 3 to 5 sentences, enough to actually answer, with a concrete tip or example where it helps (${LENGTH}).`;
 export const RESPONSE_STYLES = {
   concise: { label: 'Concise', prompt: `Get straight to the point. Length: one or two sentences (${LENGTH}).`, maxTokens: 200 },
   normal: { label: 'Normal', prompt: NORMAL, maxTokens: 500 },
-  chatty: { label: 'Chatty', prompt: `Be conversational and warm. Length: about 4 to 6 sentences, ending with a short follow-up question (${LENGTH}).`, maxTokens: 600 },
-  detailed: { label: 'Detailed', prompt: `Give a thorough answer covering the key steps or reasons. Length: 2 to 4 short paragraphs, roughly 150 to 300 words, separated by blank lines (${LENGTH}).`, maxTokens: 1000 },
-  friendly: { label: 'Friendly', prompt: `Be warm and encouraging. ${NORMAL}`, maxTokens: 500 },
-  professional: { label: 'Professional', prompt: `Be precise and neutral in tone, like a capable colleague. ${NORMAL}`, maxTokens: 500 },
-  playful: { label: 'Playful', prompt: `Be playful and witty with light humor, while still answering the question. ${NORMAL}`, maxTokens: 500 },
+  chatty: { label: 'Chatty', prompt: `Be conversational and warm, like a friend. ${SHORT} Length: for a real question, about 4 to 6 sentences (${LENGTH}). End with a short follow-up question about the user.`, maxTokens: 600 },
+  detailed: { label: 'Detailed', prompt: `${SHORT} For a real question, give a thorough answer covering the key steps or reasons. Length: 2 to 4 short paragraphs, roughly 150 to 300 words, separated by blank lines (${LENGTH}).`, maxTokens: 1000 },
+  // Tone words alone ("playful") barely change a small model's reply, so each
+  // tone names what it looks like.
+  friendly: { label: 'Friendly', prompt: `Be warm and encouraging: notice how the user might feel and cheer them on. ${NORMAL}`, maxTokens: 500 },
+  professional: { label: 'Professional', prompt: `Be precise and neutral, like a capable colleague: no exclamation marks, cute particles or emoji, and lead with the answer. ${NORMAL}`, maxTokens: 500 },
+  playful: { label: 'Playful', prompt: `Be playful and witty: use a pun, a funny comparison or a bit of teasing, while still answering the question. ${NORMAL}`, maxTokens: 500 },
 };
 
 export const MAX_INSTRUCTIONS = 500;

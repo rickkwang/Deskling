@@ -23,6 +23,7 @@ npm start                      # the pet (tray 📎: show/hide/quit; right-click
 npm run selftest               # end-to-end: idle → click → listening → thinking → speaking → idle
 npm test                       # runtime semantics (exit branches, queue, idle levels)
 npm run validate               # validate every characters/*/character.json
+npm run eval:prompts           # try the chat prompt on the local Ollama model (limits, refusals)
 npm run dist                   # release/: Deskling-<version>-arm64.dmg + .zip + latest-mac.yml (ad-hoc signed)
 npm run preview -- --preview=clippy   # QA: play every animation with its state tags
 npx electron . --audit                # QA: every character — sprite cells non-empty, every animation ends visible,
@@ -60,7 +61,7 @@ src/runtime/     AnimationPlayer (frames, branching, exit branches) + CharacterR
 src/ai/          Ollama provider (local models only, never pulls) + Assistant (persona, history)
 src/main/        Electron shell: transparent pet + balloon windows, drag, menus, tray, settings
 src/renderer/    pet, speech balloon, settings UI; selftest, preview, audit
-tools/           clippy.js and generated-sheet → Character importers, validator
+tools/           clippy.js and generated-sheet → Character importers, validator, prompt eval
 ```
 
 To add a custom character, put `character.json` + a spritesheet in
