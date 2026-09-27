@@ -1,14 +1,14 @@
 /* Classic: the Office 97/2000 Assistant balloon, as in the "What would you
    like to do?" balloon: the tooltip yellow (Windows InfoBackground, 255 255
    225), a one-pixel black outline with rounded corners, no shadow, and
-   Tahoma 8 pt. The question goes in a sunken white field and "Search" is a
-   standard grey push button (bevels as in the Windows 98 theme). */
+   Tahoma 8 pt. A thin darker-yellow line sets off the question, which goes in a
+   sunken white field; "Search" is a standard grey push button (bevels as in the Windows 98 theme). */
 [data-theme="classic"] {
   --font: 11px/1.45 Tahoma, "Microsoft Sans Serif", "PingFang SC", sans-serif;
   --paper: #ffffe1;
   --ink: #000;
   --edge: #000;
-  --rule: transparent;
+  --rule: #d8d4a0;
   --hint: #808080;
   --error: #800000;
   --radius: 9;
@@ -20,9 +20,9 @@
 
 [data-theme="classic"] ::selection { background: #000080; color: #fff; }
 
-[data-theme="classic"] #msg { padding: 10px 12px 4px; }
+[data-theme="classic"] #msg { padding: 10px 12px 8px; }
 
-[data-theme="classic"] #ask { gap: 6px; padding: 6px 10px 10px 11px; border-top: 0; }
+[data-theme="classic"] #ask { gap: 6px; padding: 8px 10px 10px 11px; }
 
 /* Sunken white field. */
 [data-theme="classic"] #input {

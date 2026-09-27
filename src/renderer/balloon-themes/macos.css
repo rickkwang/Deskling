@@ -2,7 +2,7 @@
    17-pt corner radius, a 29 × 12 arrow with a rounded tip that flares into
    the edge, a half-point edge (dark mode adds a light line inside it), and a
    soft shadow. Light or dark with the system appearance. Controls match a
-   real popover's: 13-pt SF text, no rule above the field, a 24-pt field
+   real popover's: 13-pt SF text, a hairline above the field, a 24-pt field
    and push button with 8-pt corners (no focus ring while typing), and the
    button grey (a popover's default button is not blue). */
 [data-theme="macos"] {
@@ -46,7 +46,7 @@
   [data-theme="macos"] #shape .inner-rim { display: inline; }
 }
 
-[data-theme="macos"] #msg { padding: 12px 15px 4px; }
+[data-theme="macos"] #msg { padding: 12px 15px 10px; }
 [data-theme="macos"] #msg::-webkit-scrollbar { width: 8px; }
 [data-theme="macos"] #msg::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
@@ -54,7 +54,7 @@
   background: var(--hint) padding-box;
 }
 
-[data-theme="macos"] #ask { gap: 8px; padding: 6px 9px 9px; border-top: 0; }
+[data-theme="macos"] #ask { gap: 8px; padding: 9px; }
 
 [data-theme="macos"] #input {
   height: 24px;
