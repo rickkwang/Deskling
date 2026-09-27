@@ -1,3 +1,5 @@
+**New in 0.3.6:** no Ollama? The pet still keeps you company. Click it for jokes, riddles, little games and predictions, in English or Chinese to match your Mac, and poke it a few times in a row to see what happens. A new Chat switch in Assistant Settings > Behavior turns Ollama on or off.
+
 **Fixed in 0.3.5:** the pet no longer floats over full-screen videos and apps; it slides away with your desktop and comes back when you leave full screen.
 
 **Fixed in 0.3.4:** quitting Deskling no longer shows a "JavaScript error in the main process" box that keeps coming back after you click OK.
