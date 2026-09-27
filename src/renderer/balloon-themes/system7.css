@@ -7,7 +7,8 @@
 
    Geneva 9 and Chicago 12 are Giles Booth's bitmap recreations
    (FindersKeepers and ChiKareGo2, CC BY); 16px draws them one font pixel
-   per CSS pixel. Text they lack (Chinese, emoji) falls back to system fonts
+   per CSS pixel; the help text is drawn a little larger (20px) to stay
+   readable. Text they lack (Chinese, emoji) falls back to system fonts
    scaled down to match. */
 @font-face {
   font-family: "Geneva 9";
@@ -36,7 +37,7 @@
 }
 
 [data-theme="system7"] {
-  --font: 16px/12px "Geneva 9", "System 7 CJK", "System 7 Emoji", sans-serif;
+  --font: 20px/15px "Geneva 9", "System 7 CJK", "System 7 Emoji", sans-serif;
   --system-font: 16px/16px "Chicago 12", "System 7 CJK Bold", "System 7 Emoji", sans-serif;
   --ink: #000;
   --hint: #808080;
