@@ -1158,7 +1158,8 @@ function registerIpc() {
 if (!SELFTEST && !PREVIEW && !SETTINGS_PREVIEW && !AUDIT && !app.requestSingleInstanceLock()) app.quit();
 app.on('second-instance', () => updateSettings({ enabled: true }));
 // The user went to another app (the pet and its balloon count as one).
-app.on('did-resign-active', () => win?.webContents.send('pet:away'));
+// Quitting also resigns active, after the pet window is already destroyed.
+app.on('did-resign-active', () => { if (win && !win.isDestroyed()) win.webContents.send('pet:away'); });
 
 app.whenReady().then(() => {
   migrateUserData();
