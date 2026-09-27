@@ -266,7 +266,7 @@ body {
 }
 .name-field::placeholder { color: #b0aea5; font-weight: normal; }
 .name-field:hover { border-color: var(--line); }
-.name-field:focus { outline: none; background: var(--card); border-color: var(--clay); box-shadow: 0 0 0 3px var(--clay-wash); }
+.name-field:focus { outline: none; background: var(--card); }
 /* Who it is (optional): smaller than the name. */
 .about-field { font: 12px/1.3 var(--sans); color: var(--body); }
 /* An empty name (a new character) shows as a field; a set one reads as text. */
@@ -508,7 +508,7 @@ textarea {
   transition: border-color 120ms, box-shadow 120ms;
 }
 textarea::placeholder { color: #b0aea5; }
-textarea:focus { outline: none; border-color: var(--clay); box-shadow: 0 0 0 3px var(--clay-wash); }
+textarea:focus { outline: none; }
 
 .help { color: var(--muted); font-size: 11.5px; margin: 8px 4px 0; }
 .label small.warn { color: var(--clay-deep); }
@@ -533,7 +533,7 @@ textarea:focus { outline: none; border-color: var(--clay); box-shadow: 0 0 0 3px
   transition: border-color 120ms;
 }
 .field:hover { border-color: rgba(31, 30, 29, 0.35); }
-.field:focus { outline: none; border-color: var(--clay); box-shadow: 0 0 0 3px var(--clay-wash); }
+.field:focus { outline: none; }
 /* No stepper arrows: they cover the digits in a field this narrow (the arrow
    keys still step). */
 .field::-webkit-inner-spin-button, .field::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }

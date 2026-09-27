@@ -2,7 +2,7 @@
    inside the rim, a caustic glow pooling at the bottom and a blue rim lit
    from inside. The controls follow the Aqua Human Interface Guidelines
    (Apple, June 2002): 13-point Lucida Grande, a square text field with a
-   3-pixel inner shadow and a blue focus ring, and a 20-pixel capsule push
+   3-pixel inner shadow (no focus ring while typing), and a 20-pixel capsule push
    button that is clear, or blue and pulsing when it is the default. */
 [data-theme="aqua"] {
   --font: 13px/1.38 "Lucida Grande", "PingFang SC", -apple-system, sans-serif;
@@ -59,14 +59,6 @@
   box-shadow: inset 0 1px #c3c3c3, inset 0 2px #f0f0f0, inset 1px 0 #e3e3e3, inset -1px 0 #e3e3e3;
   padding: 0 4px;
 }
-/* Focus (HIG fig. 9-1): the frame turns blue inside a 3-pixel glow. */
-[data-theme="aqua"] #input:focus {
-  border-color: #7fa7ce;
-  box-shadow:
-    inset 0 1px #c3c3c3, inset 0 2px #f0f0f0,
-    0 0 0 1px #96bce0, 0 0 0 2px #b3cfe8, 0 0 0 3px #d3e2f2;
-}
-
 /* Push button (HIG fig. 7-3): 20 high plus shadow, 14-pixel end caps. */
 [data-theme="aqua"] #send {
   position: relative;
