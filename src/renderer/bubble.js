@@ -19,7 +19,7 @@ let tailLeft = 186;
 // places the window for it). Radius, tail shape and shadow blur come from the
 // theme's stylesheet.
 let tail = 7;
-const SHEEN = 34; // max height of the Aqua gel highlight
+const SHEEN = 22; // height of the Aqua gel highlight
 const shape = $('#shape');
 
 function themeGeometry() {
@@ -88,7 +88,7 @@ function drawShape() {
   shape.setAttribute('height', h);
   $('#shape-blur feGaussianBlur').setAttribute('stdDeviation', blur);
   // Aqua: a gel highlight floating just inside the rim, a glow at the bottom.
-  setRect('#sheen-rect', 5, 2, w - 10, Math.min(SHEEN, h * 0.48));
+  setRect('#sheen-rect', 3, 2, w - 6, Math.min(SHEEN, h * 0.4));
   setRect('#glow-rect', 0, h * 0.35, w, h * 0.65 + tail);
   // Windows 98 (square corners): a raised frame lit from the top left. The
   // outer line runs along the tail too, light on top and dark below; the
