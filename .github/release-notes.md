@@ -1,3 +1,5 @@
+**Fixed in 0.3.4:** quitting Deskling no longer shows a "JavaScript error in the main process" box that keeps coming back after you click OK.
+
 **Improved in 0.3.3:** the pet no longer lists what it can and cannot do when you just greet it or ask for a joke, keeps small talk short in every response style, and the Friendly, Professional and Playful styles now sound clearly different.
 
 **Fixed in 0.3.2:** switching characters while Claude Code works no longer makes the old and new characters flicker in turn, and switching several times in a row lands on your last pick.
