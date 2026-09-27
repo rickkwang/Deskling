@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, Notification, Tray, nativeImage, screen, shell } from 'electron';
+import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, Notification, Tray, nativeImage, screen, shell, systemPreferences } from 'electron';
 import { execFile, execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -229,7 +229,6 @@ function createWindow() {
     },
   });
   win.setAlwaysOnTop(true, 'floating');
-  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   win.setIgnoreMouseEvents(true, { forward: true });
   win.loadFile(path.join(ROOT, 'src/renderer/index.html'));
   win.once('ready-to-show', () => { if (settings.enabled || SELFTEST) win.showInactive(); });
@@ -283,7 +282,6 @@ function createBubbleWindow() {
     webPreferences: { preload: path.join(ROOT, 'src/main/preload.cjs'), contextIsolation: true },
   });
   bubbleWin.setAlwaysOnTop(true, 'floating');
-  bubbleWin.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   bubbleWin.loadFile(path.join(ROOT, 'src/renderer/bubble.html'));
   // Content sent before the page loaded would be lost: replay the latest.
   bubbleWin.webContents.on('did-finish-load', () => {
@@ -412,6 +410,34 @@ function showPet() {
 function hidePet() {
   // Renderer plays the Hide animation, then asks us to hide the window.
   if (win?.isVisible()) win.webContents.send('pet:visibility', 'hide');
+}
+
+// ---- spaces ---------------------------------------------------------------
+// The pet lives on one space, so a full-screen app slides in over it like over
+// any window. Joining every space would float it over full-screen apps too: an
+// app without a Dock icon gets its windows shown there regardless. Instead it
+// follows you to another desktop once the switch settles, but not into a
+// full-screen space, which has the WindowManager's backdrop (layer and owner
+// are readable without Screen Recording permission).
+const FULLSCREEN_PROBE = `ObjC.import('CoreGraphics');
+JSON.stringify(ObjC.deepUnwrap(ObjC.castRefToObject($.CGWindowListCopyWindowInfo($.kCGWindowListOptionOnScreenOnly, 0)))
+  .filter((w) => w.kCGWindowOwnerName === 'WindowManager' && w.kCGWindowLayer === -2147483622)
+  .map((w) => w.kCGWindowBounds))`;
+let spaceSeq = 0;
+
+function followSpace() {
+  const seq = ++spaceSeq;
+  execFile('osascript', ['-l', 'JavaScript', '-e', FULLSCREEN_PROBE], (err, out) => {
+    if (err || seq !== spaceSeq || win.isDestroyed()) return;
+    const { bounds } = screen.getDisplayNearestPoint(petPoint());
+    if (JSON.parse(out).some((b) => b.X === bounds.x && b.Y === bounds.y)) return;
+    // Joining every space and leaving again moves a window to the active one.
+    for (const w of [win, bubbleWin]) {
+      if (!w || w.isDestroyed()) continue;
+      w.setVisibleOnAllWorkspaces(true, { skipTransformProcessType: true });
+      w.setVisibleOnAllWorkspaces(false, { skipTransformProcessType: true });
+    }
+  });
 }
 
 // ---- custom characters (Settings > Character) -------------------------------
@@ -1198,6 +1224,9 @@ app.whenReady().then(() => {
   }
   createWindow();
   createTray();
+  if (process.platform === 'darwin' && !SELFTEST) {
+    systemPreferences.subscribeWorkspaceNotification('NSWorkspaceActiveSpaceDidChangeNotification', followSpace);
+  }
   if (TIMER_DEMO) timer.start(settings.focusSeconds, settings.breakSeconds);
   if (CLAUDE_DEMO) startClaudeServer();
   // Rewrites hooks an older version installed (a no-op when they're current).
