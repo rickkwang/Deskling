@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld('pet', {
   contextMenu: () => ipcRenderer.send('menu:context'),
   send: (text) => ipcRenderer.invoke('ai:send', text),
   cancel: () => ipcRenderer.send('ai:cancel'),
+  aiStatus: () => ipcRenderer.invoke('ai:status'),
   onToken: on('ai:token'),
   onCharacter: on('pet:character'),
   onRenamed: on('pet:renamed'),

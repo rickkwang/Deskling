@@ -76,6 +76,7 @@ export class Assistant {
     this.models = [];
     this.model = null;
     this.status = { available: false };
+    this.enabled = true; // Settings > Behavior > Ollama; off, the pet only says preset lines
     this.persona = null;
     this.behavior = { responseStyle: 'normal', instructions: '', claudeCode: false };
     this.history = [];
@@ -92,11 +93,17 @@ export class Assistant {
 
   info() {
     return {
+      enabled: this.enabled,
       available: this.status.available,
       error: this.status.error,
       models: this.models.map((m) => m.name),
       model: this.model?.name || null,
     };
+  }
+
+  setEnabled(on) {
+    this.enabled = Boolean(on);
+    if (!this.enabled) this.cancel();
   }
 
   setModel(name) {
@@ -139,6 +146,7 @@ export class Assistant {
   }
 
   async send(text, onToken) {
+    if (!this.enabled) throw new Error('OLLAMA_OFF');
     if (!this.model) {
       await this.refresh();
       if (!this.model) throw new Error(this.status.available ? 'NO_LOCAL_MODEL' : 'OLLAMA_UNAVAILABLE');
@@ -177,6 +185,7 @@ export class Assistant {
   // Leaves a chat in progress alone; kept in history so the user can reply to
   // it. Throws if there is no model or it takes longer than `timeoutMs`.
   async remark(event, { locale = '', timeoutMs = 20_000 } = {}) {
+    if (!this.enabled) throw new Error('OLLAMA_OFF');
     if (!this.model) await this.refresh();
     if (!this.model) throw new Error(this.status.available ? 'NO_LOCAL_MODEL' : 'OLLAMA_UNAVAILABLE');
     const lastUser = this.history.findLast((m) => m.role === 'user' && !m.event)?.content || '';

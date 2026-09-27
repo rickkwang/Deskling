@@ -54,6 +54,7 @@ let settings = {
   enabled: true, greeting: true, speech: false, responseStyle: 'normal', instructions: '',
   focusSeconds: 25 * 60, breakSeconds: 5 * 60, timerSound: 'indigo', // Focus Timer
   claudeCode: false, // work along with Claude Code (hooks in its settings.json)
+  ollama: true, // chat through a local Ollama model; off, the pet says preset lines
 };
 // Speech balloon looks: src/renderer/balloon-themes/<id>.css. `tail` is how
 // far the tail tip reaches beyond the box (it sets where the window goes);
@@ -589,6 +590,7 @@ function updateSettings(patch) {
   if (patch.character && patch.character !== prev.character) switchCharacter(patch.character);
   Object.assign(settings, patch);
   if (patch.model !== undefined) assistant.setModel(settings.model);
+  if (patch.ollama !== undefined) assistant.setEnabled(settings.ollama);
   if (patch.responseStyle !== undefined || patch.instructions !== undefined || patch.claudeCode !== undefined) {
     assistant.setBehavior({ responseStyle: settings.responseStyle, instructions: settings.instructions, claudeCode: settings.claudeCode });
   }
@@ -1031,6 +1033,7 @@ function registerIpc() {
     }
     const character = loadCharacter(settings.character);
     assistant.setPersona(character.data.persona);
+    assistant.setEnabled(settings.ollama);
     assistant.setBehavior({ responseStyle: settings.responseStyle, instructions: settings.instructions, claudeCode: settings.claudeCode });
     const ai = await assistant.refresh(settings.model);
     return { character, ai, settings: publicSettings(), selftest: SELFTEST && { quiet: process.argv.includes('--quiet'), edge: process.argv.includes('--edge') || process.argv.includes('--edge-open'), edgeOpen: process.argv.includes('--edge-open'), hold: Number(arg('hold') || 2500) } };
@@ -1146,6 +1149,7 @@ function registerIpc() {
     }
   });
   ipcMain.on('ai:cancel', () => assistant.cancel());
+  ipcMain.handle('ai:status', () => assistant.refresh(settings.model));
   ipcMain.on('update:seen', (_e, version) => updateSettings({ updateSeen: version }));
   ipcMain.on('timer:action', (_e, action) => timerAction(action));
   ipcMain.handle('timer:remark', (_e, info) => timerRemark(info));

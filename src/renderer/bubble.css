@@ -112,6 +112,8 @@ body.open #bubble {
   border-top: 1px solid var(--rule);
 }
 #msg:empty + #ask { border-top: 0; box-shadow: none; }
+/* Chat switched off (Settings > Ollama): the balloon only talks. */
+body.no-chat #ask { display: none; }
 
 #input {
   flex: 1;

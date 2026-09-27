@@ -2,7 +2,7 @@
 // the main process, which persists it and broadcasts it to the pet.
 
 const $ = (sel) => document.querySelector(sel);
-const { settings: initial, characters: initialCharacters, ai, styles, balloons, timer, claudeCode: initialClaude } = await window.pet.getSettings();
+const { settings: initial, characters: initialCharacters, ai: initialAi, styles, balloons, timer, claudeCode: initialClaude } = await window.pet.getSettings();
 let characters = initialCharacters;
 let settings = initial;
 
@@ -310,14 +310,24 @@ const styleSelect = $('#style');
 for (const [value, { label }] of Object.entries(styles)) styleSelect.add(new Option(label, value));
 
 const modelSelect = $('#model');
-if (ai.models.length) {
-  for (const m of ai.models) modelSelect.add(new Option(m, m));
-  $('#model-note').textContent = 'Local Ollama model';
-} else {
-  modelSelect.add(new Option(ai.available ? 'No local models' : 'Ollama not running', ''));
-  modelSelect.disabled = true;
-  $('#model-note').textContent = ai.available ? 'Pull one with ollama pull' : 'Start it with ollama serve';
+let ai = initialAi;
+function renderModels() {
+  modelSelect.replaceChildren();
+  if (ai.models.length) {
+    for (const m of ai.models) modelSelect.add(new Option(m, m));
+    modelSelect.value = ai.models.includes(settings.model) ? settings.model : ai.model;
+    $('#model-note').textContent = 'Local Ollama model';
+  } else {
+    modelSelect.add(new Option(ai.available ? 'No local models' : 'Ollama not running', ''));
+    $('#model-note').textContent = ai.available ? 'Pull one with ollama pull' : 'Start it with ollama serve';
+  }
+  modelSelect.disabled = !ai.models.length || !settings.ollama;
 }
+// Switched on: look again, Ollama may have started since Settings opened.
+$('#ollama').addEventListener('change', async (e) => {
+  if (e.target.checked) ai = await window.pet.aiStatus();
+  renderModels();
+});
 
 // Hours, minutes and seconds. The total is what counts: 90 min reads back as
 // 1 h 30 min, and out-of-range totals snap to the nearest limit.
@@ -358,6 +368,7 @@ bind('#greeting', 'greeting');
 bind('#speech', 'speech');
 bind('#style', 'responseStyle', 'value');
 bind('#model', 'model', 'value');
+bind('#ollama', 'ollama');
 bind('#claude-code', 'claudeCode');
 
 // Claude Code: the switch adds or removes Deskling's hooks in Claude Code's
@@ -442,7 +453,8 @@ function render() {
   soundSelect.value = settings.timerSound;
   $('#claude-code').checked = settings.claudeCode;
   renderClaude();
-  if (ai.models.length) modelSelect.value = ai.models.includes(settings.model) ? settings.model : ai.model;
+  $('#ollama').checked = settings.ollama;
+  renderModels();
   if (document.activeElement !== instructions) {
     instructions.value = settings.instructions || '';
     updateCount();

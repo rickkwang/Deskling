@@ -2,6 +2,7 @@ import { CharacterRuntime } from '../runtime/character-runtime.js';
 import { validateCharacter } from '../character/validate.js';
 import { speak, cancelSpeech } from './speech.js';
 import { clock } from '../main/focus-timer.js';
+import { Pokes, offlineReason } from '../ai/offline-lines.js';
 
 const petEl = document.querySelector('#pet');
 const timerEl = document.querySelector('#timer');
@@ -75,7 +76,7 @@ let balloonOpen = false;
 let content = { text: '', error: false, dots: false };
 
 function renderBalloon() {
-  window.pet.bubble({ ...content, busy });
+  window.pet.bubble({ ...content, busy, chat: !offline() });
 }
 
 function openBubble({ focus = false } = {}) {
@@ -126,10 +127,32 @@ window.pet.onBubbleEscape(() => closeBubble());
 
 // ---- conversation -----------------------------------------------------------
 
-const ERRORS = {
-  NO_LOCAL_MODEL: "I couldn't find a local Ollama model. Pull a small one yourself (e.g. `ollama pull qwen2.5:1.5b`) — I won't download anything on my own.",
-  OLLAMA_UNAVAILABLE: "Ollama doesn't seem to be running. Install it from ollama.com (or start it with `ollama serve`), then ask me again.",
-};
+// Without a model (Ollama off in Settings, not running, or with no local
+// model) the balloon has no input; each click brings a new line instead.
+let ai = { available: false, model: null };
+const pokes = new Pokes({ lang: navigator.language });
+const offline = () => offlineReason({ ...ai, enabled: settings.ollama !== false });
+const showingOffline = () => Boolean(pokes.last) && content.text === pokes.last;
+
+function sayOffline() {
+  const { text, gesture } = pokes.next(character.displayName);
+  say(text);
+  return gesture;
+}
+
+// Asks main whether Ollama has come up (or gone away) since; once the pet can
+// chat, its line gives way to a hello and the input comes back.
+let checking = null;
+function checkAi() {
+  checking ??= window.pet.aiStatus().then((next) => {
+    ai = next;
+    checking = null;
+    if (!offline() && showingOffline() && !busy) say(greeting());
+    else renderBalloon();
+  });
+  return checking;
+}
+const OFFLINE_ERRORS = ['OLLAMA_OFF', 'OLLAMA_UNAVAILABLE', 'NO_LOCAL_MODEL'];
 
 let streamed = '';
 window.pet.onToken((token) => {
@@ -164,8 +187,13 @@ async function ask(text) {
   } else if (res.error === 'ABORTED') {
     renderBalloon();
     runtime.setState('idle');
+  } else if (OFFLINE_ERRORS.includes(res.error)) {
+    // Ollama went away mid-conversation: no more input, just company.
+    ai = { ...ai, available: res.error === 'NO_LOCAL_MODEL', model: null };
+    sayOffline();
+    runtime.setState('idle');
   } else {
-    say(ERRORS[res.error] || (res.ok ? "Hmm, I didn't come up with anything. Try asking another way?" : `Something went wrong: ${res.error}`), { error: true });
+    say((res.ok ? "Hmm, I didn't come up with anything. Try asking another way?" : `Something went wrong: ${res.error}`), { error: true });
     runtime.setState('idle');
     runtime.act('confused');
   }
@@ -352,6 +380,10 @@ document.addEventListener('pointerup', endPress);
 petEl.addEventListener('lostpointercapture', () => { if (press?.dragging) endPress(); });
 
 function onPetClick() {
+  // Can't chat: every click brings a new line (and a run of quick clicks, a
+  // reaction); the balloon folds away on its own. A Claude Code notice is
+  // closed as usual, which marks it seen.
+  if (!busy && offline() && !showingNotice()) return poke();
   if (balloonOpen && !busy && runtime.state !== 'listening') {
     listen();
     openBubble({ focus: true });
@@ -361,6 +393,24 @@ function onPetClick() {
   if (!busy) content = { ...content, error: false, dots: false };
   listen();
   openBubble({ focus: true });
+}
+
+const POKE_SHOWN_MS = 7000; // plus reading time for longer lines
+let pokeTimer = null;
+function poke() {
+  const gesture = sayOffline();
+  openBubble();
+  if (gesture) {
+    runtime.setState('idle');
+    runtime.act(gesture);
+    backToWork();
+  }
+  const shown = pokes.last;
+  clearTimeout(pokeTimer);
+  pokeTimer = setTimeout(() => {
+    if (balloonOpen && !busy && content.text === shown) hideBubble();
+  }, POKE_SHOWN_MS + shown.length * 40);
+  if (settings.ollama !== false) checkAi();
 }
 
 document.addEventListener('contextmenu', (e) => {
@@ -387,15 +437,27 @@ window.pet.onVisibility(async (v) => {
 });
 window.pet.onSettings((next) => {
   const rescale = next.scale !== settings.scale;
+  const chat = next.ollama !== settings.ollama;
   settings = next;
   document.body.dataset.theme = settings.balloon;
   if (rescale) applyLayout();
   if (!settings.speech) cancelSpeech();
+  if (chat) toggleChat();
 });
+
+// Ollama switched on or off in Settings: the input comes and goes, and a
+// hello becomes a line or back.
+function toggleChat() {
+  if (settings.ollama) return checkAi();
+  if (busy) window.pet.cancel();
+  if (!busy && content.text === lastGreeting) sayOffline();
+  else renderBalloon();
+}
 window.pet.onChatReset(() => {
   if (busy) window.pet.cancel();
   cancelSpeech();
-  say(greeting());
+  if (offline()) sayOffline();
+  else say(greeting());
   runtime.setState('idle');
 });
 // One switch at a time, to the latest choice: picks made while a character
@@ -424,7 +486,8 @@ window.pet.onCharacter(async (next) => {
     switching = false;
     entering = false;
   }
-  say(greeting());
+  if (offline()) sayOffline();
+  else say(greeting());
   if (settings.greeting) openBubble();
   showNotice();
   backToWork(); // a new runtime starts idle without a state change
@@ -457,7 +520,7 @@ function announce(text, { error = false, link = false, gesture = error ? 'confus
 
 function announceUpdate() {
   const version = pendingUpdate;
-  if (!version || entering || runtime.state === 'hidden' || (balloonOpen && content.text !== lastGreeting)) return;
+  if (!version || entering || runtime.state === 'hidden' || (balloonOpen && content.text !== lastGreeting && !showingOffline())) return;
   if (!announce(`Deskling ${version} is out! Right-click me and choose “Update to ${version}…” whenever you like — I'll be back in a few seconds.`)) return;
   pendingUpdate = null;
   window.pet.updateSeen(version);
@@ -494,17 +557,14 @@ document.body.dataset.theme = settings.balloon;
 mountCharacter(init.character);
 renderTimer(await window.pet.timer.status());
 claude = await window.pet.claude.status();
+ai = init.ai;
 log(`ai: ${init.ai.available ? `ollama ok, local models [${init.ai.models.join(', ')}], using ${init.ai.model}` : `unavailable (${init.ai.error})`}`);
 // Greeting setting: "Say hello when the assistant opens" (the hello gesture
 // and balloon). Office characters' entrance is their Greeting either way.
 const greeted = runtime.show({ greet: settings.greeting });
-if (!init.ai.model) {
-  say(init.ai.available ? ERRORS.NO_LOCAL_MODEL : ERRORS.OLLAMA_UNAVAILABLE, { error: true });
-  greeted.then(() => { runtime.act('confused'); openBubble(); });
-} else {
-  say(greeting());
-  if (settings.greeting) greeted.then(() => openBubble());
-}
+if (offline()) sayOffline();
+else say(greeting());
+if (settings.greeting) greeted.then(() => openBubble());
 greeted.then(() => { showNotice(); backToWork(); });
 
 if (selftest) {

@@ -108,8 +108,9 @@ function setRect(sel, x, y, width, height) {
   for (const [k, v] of Object.entries({ x, y, width, height })) el.setAttribute(k, v);
 }
 
-api.onContent(({ text, error, dots, busy: b, link }) => {
+api.onContent(({ text, error, dots, busy: b, link, chat = true }) => {
   busy = b;
+  document.body.classList.toggle('no-chat', !chat);
   msg.classList.toggle('error', Boolean(error));
   // A Claude Code notice: clicking it goes to the terminal.
   msg.classList.toggle('link', Boolean(link));
