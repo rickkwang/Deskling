@@ -20,11 +20,11 @@
 [data-theme="aqua"] #shape .fill-bottom { stop-color: rgba(196, 226, 252, 0.9); }
 [data-theme="aqua"] #shape .glass { display: inline; }
 [data-theme="aqua"] #shape .glow { fill: url(#glass-glow); }
-[data-theme="aqua"] #shape .glow-in { stop-color: rgba(120, 220, 255, 0.45); }
+[data-theme="aqua"] #shape .glow-in { stop-color: rgba(120, 220, 255, 0.75); }
 [data-theme="aqua"] #shape .glow-out { stop-color: rgba(140, 225, 255, 0); }
 [data-theme="aqua"] #shape .sheen { fill: url(#glass-sheen); }
 [data-theme="aqua"] #shape .sheen-top { stop-color: rgba(255, 255, 255, 0.95); }
-[data-theme="aqua"] #shape .sheen-bottom { stop-color: rgba(255, 255, 255, 0); }
+[data-theme="aqua"] #shape .sheen-bottom { stop-color: rgba(255, 255, 255, 0.25); }
 /* Stroked twice as wide and clipped to the shape: only the inner half shows. */
 [data-theme="aqua"] #shape .inner-rim { fill: none; stroke: rgba(255, 255, 255, 0.85); stroke-width: 2; }
 [data-theme="aqua"] #shape .rim { stroke: rgba(35, 85, 160, 0.62); }
