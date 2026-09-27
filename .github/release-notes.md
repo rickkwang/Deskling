@@ -1,3 +1,5 @@
+**Improved in 0.3.3:** the pet no longer lists what it can and cannot do when you just greet it or ask for a joke, keeps small talk short in every response style, and the Friendly, Professional and Playful styles now sound clearly different.
+
 **Fixed in 0.3.2:** switching characters while Claude Code works no longer makes the old and new characters flicker in turn, and switching several times in a row lands on your last pick.
 
 **Fixed in 0.3.1:** after you click the pet, it goes back to working along with Claude Code as soon as you switch to another app (it used to wait until you closed its balloon). It also keeps only the latest Claude Code notices in its chat, so it no longer forgets your own conversation.
