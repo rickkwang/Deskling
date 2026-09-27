@@ -393,7 +393,7 @@ input[type="range"]:focus-visible::-webkit-slider-thumb { outline: 2px solid var
   transform: rotate(45deg);
 }
 .mini-classic {
-  --mini-bg: #ffffe1;
+  --mini-bg: #ffffcc;
   --mini-edge: #000;
   --mini-radius: 6px;
   --mini-shadow: none;

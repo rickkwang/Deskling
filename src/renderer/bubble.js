@@ -57,6 +57,15 @@ function tailSegments(kind, c, w, r) {
       ? { start: [near, 0], segs: [{ to: [c, t] }, { to: [far, 0] }] }
       : { start: [w - far, 0], segs: [{ to: [c, t] }, { to: [w - near, 0] }] };
   }
+  if (kind === 'office') {
+    // Office Assistant balloon: a long, thin wedge leaning out to its tip,
+    // one edge nearly upright; it leans away from the balloon's middle.
+    const lean = c < w / 2 ? -1 : 1;
+    const [a, b] = [c - lean * 11, c - lean * 2];
+    return lean > 0
+      ? { start: [a, 0], segs: [{ to: [c, t] }, { to: [b, 0] }] }
+      : { start: [b, 0], segs: [{ to: [c, t] }, { to: [a, 0] }] };
+  }
   return { start: [c - t, 0], segs: [{ to: [c, t] }, { to: [c + t, 0] }] };
 }
 

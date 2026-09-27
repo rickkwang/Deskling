@@ -61,7 +61,7 @@ let settings = {
 // `corner` tails grow out of a corner, like System 7 Balloon Help, so the
 // balloon is placed with that corner at the pet.
 const BALLOON_THEMES = {
-  classic: { label: 'Classic', tail: 7 },
+  classic: { label: 'Classic', tail: 14 }, // the Office Assistant's long wedge
   aqua: { label: 'Aqua', tail: 7 },
   macos: { label: 'macOS', tail: 12 }, // NSPopover's arrow on macOS 26
   win98: { label: 'Windows 98', tail: 7 },

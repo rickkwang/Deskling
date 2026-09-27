@@ -8,8 +8,8 @@
 
 /* Classic: the Office Assistant balloon's tooltip yellow and black outline. */
 [data-theme="classic"] {
-  --pill-bg: #ffffe1;
-  --pill-hover: #ffffc4;
+  --pill-bg: #ffffcc;
+  --pill-hover: #ffffb0;
   --pill-ink: #000;
   --pill-edge: 1px solid #000;
   --pill-radius: 10px;

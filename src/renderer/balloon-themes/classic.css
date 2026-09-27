@@ -1,50 +1,48 @@
-/* Classic: the Office 97/2000 Assistant balloon, as in the "What would you
-   like to do?" balloon: the tooltip yellow (Windows InfoBackground, 255 255
-   225), a one-pixel black outline with rounded corners, no shadow, and
-   Tahoma 8 pt. A thin darker-yellow line sets off the question, which goes in a
-   sunken white field; "Search" is a standard grey push button (bevels as in the Windows 98 theme). */
+/* Classic: the Office Assistant balloon (Office 97 to 2003), as in "What
+   would you like to do?": a pale yellow balloon with a one-pixel black
+   outline, rounded corners and no shadow, a long thin wedge for a tail, and
+   Tahoma 8 pt. A light grey line sets off the question, which goes in a flat
+   white field; the button is flat too, a light face in a thin grey frame. */
 [data-theme="classic"] {
   --font: 11px/1.45 Tahoma, "Microsoft Sans Serif", "PingFang SC", sans-serif;
-  --paper: #ffffe1;
+  --paper: #ffffcc;
   --ink: #000;
   --edge: #000;
-  --rule: #d8d4a0;
+  --rule: #c8c8b4;
   --hint: #808080;
   --error: #800000;
   --radius: 9;
-  --tail-shape: straight;
+  --tail-shape: office;
   --shadow-blur: 0;
 }
 [data-theme="classic"] #shape .fill { fill: var(--paper); }
 [data-theme="classic"] #shape .rim { stroke: var(--edge); }
 
-[data-theme="classic"] ::selection { background: #000080; color: #fff; }
+[data-theme="classic"] ::selection { background: #316ac5; color: #fff; }
 
-[data-theme="classic"] #msg { padding: 10px 12px 8px; }
+[data-theme="classic"] #msg { padding: 9px 10px 8px; }
 
-[data-theme="classic"] #ask { gap: 6px; padding: 8px 10px 10px 11px; }
+[data-theme="classic"] #ask { gap: 8px; padding: 8px 9px 9px; }
 
-/* Sunken white field. */
+/* Flat white field. */
 [data-theme="classic"] #input {
-  height: 21px;
+  height: 22px;
+  border: 1px solid #d8d8c8;
   background: #fff;
-  padding: 3px 4px;
-  box-shadow: inset -1px -1px #fff, inset 1px 1px #808080, inset -2px -2px #dfdfdf, inset 2px 2px #0a0a0a;
+  padding: 0 4px;
 }
 
-/* Raised grey push button, 75 × 23. */
+/* Flat push button: a light face in a thin grey frame. */
 [data-theme="classic"] #send {
   width: 75px;
   height: 23px;
+  border: 1px solid #a0a0a0;
+  border-radius: 3px;
   font: inherit;
-  background: #c0c0c0;
+  background: #fffff4;
   color: #000;
-  box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf;
 }
 [data-theme="classic"] .send-icon { display: none; }
 [data-theme="classic"] .send-label { display: block; }
-[data-theme="classic"] #send:disabled { color: #808080; text-shadow: 1px 1px #fff; }
-[data-theme="classic"] #send:not(:disabled):active {
-  box-shadow: inset -1px -1px #fff, inset 1px 1px #0a0a0a, inset -2px -2px #dfdfdf, inset 2px 2px #808080;
-}
-[data-theme="classic"] #send:not(:disabled):active .send-label { transform: translate(1px, 1px); }
+[data-theme="classic"] #send:disabled { color: #a0a0a0; border-color: #c8c8b4; }
+[data-theme="classic"] #send:not(:disabled):active { background: #f0f0c8; }
