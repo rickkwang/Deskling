@@ -1,3 +1,5 @@
+**Fixed in 0.3.5:** the pet no longer floats over full-screen videos and apps; it slides away with your desktop and comes back when you leave full screen.
+
 **Fixed in 0.3.4:** quitting Deskling no longer shows a "JavaScript error in the main process" box that keeps coming back after you click OK.
 
 **Improved in 0.3.3:** the pet no longer lists what it can and cannot do when you just greet it or ask for a joke, keeps small talk short in every response style, and the Friendly, Professional and Playful styles now sound clearly different.
