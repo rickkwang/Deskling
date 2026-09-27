@@ -146,10 +146,10 @@ let checking = null;
 function checkAi() {
   checking ??= window.pet.aiStatus().then((next) => {
     ai = next;
-    checking = null;
     if (!offline() && showingOffline() && !busy) say(greeting());
     else renderBalloon();
-  });
+  }).catch((e) => log(`ai status failed: ${e.message}`))
+    .finally(() => { checking = null; });
   return checking;
 }
 const OFFLINE_ERRORS = ['OLLAMA_OFF', 'OLLAMA_UNAVAILABLE', 'NO_LOCAL_MODEL'];
