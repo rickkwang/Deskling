@@ -62,7 +62,7 @@
 }
 [data-theme="system7"] #msg::-webkit-scrollbar-thumb { background: #fff; border: 1px solid #000; }
 
-[data-theme="system7"] #ask { gap: 10px; padding: 8px 12px 10px 10px; }
+[data-theme="system7"] #ask { gap: 10px; padding: 4px 12px 10px 10px; border-top: 0; }
 
 [data-theme="system7"] #input {
   height: 22px;

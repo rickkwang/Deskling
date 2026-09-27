@@ -42,11 +42,7 @@
   background: linear-gradient(90deg, #8fc2f7, #3d8ae6 55%, #6fb0f5) padding-box;
 }
 
-[data-theme="aqua"] #ask {
-  gap: 10px;
-  padding: 8px 10px 10px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8); /* etched groove */
-}
+[data-theme="aqua"] #ask { gap: 10px; padding: 4px 10px 10px; border-top: 0; }
 
 /* Text input field (HIG fig. 7-30): 22 high, grey frame darkest on top,
    and a 3-pixel shadow inside. Colours sampled from the figure. */
