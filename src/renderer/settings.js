@@ -18,21 +18,8 @@ function selectTab(name) {
     document.getElementById(tab.getAttribute('aria-controls')).hidden = !on;
   }
   tabBar.dataset.active = name;
-  fitWindow();
 }
 
-// Like System Preferences: the window grows or shrinks to the active pane.
-function fitWindow() {
-  requestAnimationFrame(() => {
-    // Measure the pane at its natural size (no flex stretching), synchronously.
-    document.body.classList.add('measuring');
-    const bottom = document.querySelector('.panel').getBoundingClientRect().bottom + 20; // body padding
-    document.body.classList.remove('measuring');
-    // How much taller than the default the user may drag the window.
-    const extra = 60;
-    window.pet.fitSettings({ height: Math.ceil(bottom), extra });
-  });
-}
 tabs.forEach((tab) => {
   tab.addEventListener('click', () => selectTab(tab.id.replace('tab-', '')));
   tab.addEventListener('keydown', (e) => {
@@ -149,7 +136,6 @@ window.pet.characters.onChange((list) => {
   characters = list;
   buildGrid();
   render();
-  fitWindow();
 });
 
 // The card under the grid: naming a new character, or renaming / deleting the
@@ -169,7 +155,6 @@ async function pickSheet() {
   custom.name.value = '';
   custom.about.value = '';
   render();
-  fitWindow();
   // Let "Preparing…" paint before main spends a moment cutting the sheet.
   await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
   const result = await window.pet.characters.prepare(file);
@@ -182,7 +167,6 @@ function stopAdding() {
   if (adding?.preview) window.pet.characters.cancel();
   adding = null;
   render();
-  fitWindow();
 }
 
 async function confirmAdd() {
@@ -192,8 +176,7 @@ async function confirmAdd() {
   const result = await window.pet.characters.add(name, custom.about.value.trim());
   if (result?.id) {
     adding = null;
-    fitWindow();
-  } else {
+    } else {
     adding.saveError = result?.error || 'Couldn’t add the character.';
   }
   render();
@@ -394,7 +377,6 @@ function renderClaude() {
 window.pet.claude.onState((next) => {
   claude = next;
   renderClaude();
-  fitWindow();
 });
 
 // Size: live while dragging; main resizes the pet around its feet.
@@ -466,4 +448,3 @@ window.pet.onSettings((next) => {
   render();
 });
 render();
-fitWindow();

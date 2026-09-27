@@ -62,7 +62,6 @@ contextBridge.exposeInMainWorld('pet', {
   },
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (patch) => ipcRenderer.send('settings:set', patch),
-  fitSettings: (fit) => ipcRenderer.send('settings:fit', fit),
   onSettings: on('settings:changed'),
   onSettingsTab: on('settings:tab'),
   characters: {

@@ -611,13 +611,10 @@ const publicSettings = () => {
   return rest;
 };
 
-let settingsUserSized = false;
-// Resize limits: width is fixed-range; height ranges from the active pane's
-// natural height to that plus the pane's own allowance (how much it can use
-// well), so the window never becomes sparse.
-const SETTINGS_MIN_W = 420;
-const SETTINGS_MAX_W = 460;
-const SETTINGS_DEFAULT_H = 600; // default window: 440 x 600, like System Preferences' Assistant pane
+// Fixed size, like System Preferences panes: switching tabs never resizes
+// the window; a pane taller than this scrolls.
+const SETTINGS_W = 540;
+const SETTINGS_H = 880;
 
 function openSettings(tab) {
   if (settingsWin) {
@@ -627,16 +624,14 @@ function openSettings(tab) {
     return;
   }
   settingsWin = new BrowserWindow({
-    width: 440,
-    height: SETTINGS_DEFAULT_H,
+    width: SETTINGS_W,
+    height: SETTINGS_H,
     title: 'Assistant',
     // Content runs under the title bar so the page is one surface; it draws
     // its own centred title and drag region.
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 12, y: 12 },
-    resizable: true,
-    minWidth: SETTINGS_MIN_W,
-    maxWidth: SETTINGS_MAX_W,
+    resizable: false,
     minimizable: true,
     maximizable: false,
     fullscreenable: false,
@@ -652,13 +647,6 @@ function openSettings(tab) {
   if (SETTINGS_PREVIEW) {
     settingsWin.webContents.once('did-finish-load', async () => {
       await new Promise((r) => setTimeout(r, 1200));
-      const size = arg('size'); // e.g. --size=520x700 simulates a manual resize
-      if (size) {
-        settingsUserSized = true;
-        const [width, height] = size.split('x').map(Number);
-        settingsWin.setBounds({ ...settingsWin.getBounds(), width, height });
-        await new Promise((r) => setTimeout(r, 400));
-      }
       if (arg('sheet')) {
         await settingsWin.webContents.executeJavaScript(`document.querySelector('.add-tile').click()`);
         await new Promise((r) => setTimeout(r, 1500));
@@ -674,9 +662,7 @@ function openSettings(tab) {
       app.exit(0);
     });
   }
-  // Once the user resizes by hand, stop snapping to the pane's natural height.
-  settingsWin.on('will-resize', () => { settingsUserSized = true; });
-  settingsWin.on('closed', () => { settingsWin = null; settingsUserSized = false; });
+  settingsWin.on('closed', () => { settingsWin = null; });
 }
 
 function buildContextMenu() {
@@ -1114,23 +1100,6 @@ function registerIpc() {
   ipcMain.on('characters:describe', (_e, id, about) => describeCharacter(id, about));
   ipcMain.handle('characters:delete', (_e, id) => deleteCharacter(id));
   ipcMain.on('characters:copy-prompt', () => clipboard.writeText(SHEET_PROMPT));
-  ipcMain.on('settings:fit', (_e, { height, extra }) => {
-    if (!settingsWin) return;
-    // `height` is the active pane's natural content height: it is the minimum,
-    // and the window snaps to it until the user resizes by hand.
-    const b = settingsWin.getBounds();
-    const frame = b.height - settingsWin.getContentSize()[1];
-    const natural = Math.max(300, Math.min(900, height)) + frame;
-    // Panes open at the default height (or taller if their content needs it).
-    const preferred = Math.max(natural, SETTINGS_DEFAULT_H);
-    const max = preferred + Math.max(0, Math.min(300, extra));
-    settingsWin.setMinimumSize(SETTINGS_MIN_W, natural);
-    settingsWin.setMaximumSize(SETTINGS_MAX_W, max);
-    const target = settingsUserSized ? Math.min(max, Math.max(b.height, natural)) : preferred;
-    // Keep the title bar in place while the pane resizes (animated on macOS).
-    if (target !== b.height) settingsWin.setBounds({ ...b, height: target }, settingsWin.isVisible());
-  });
-
   ipcMain.on('win:hide', () => {
     hideBalloon(); // already faded out by the pet before its Hide animation
     bubbleWin?.hide();
