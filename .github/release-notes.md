@@ -1,3 +1,5 @@
+**Improved in 0.3.8:** the Classic balloon now looks like the Office Assistant's: a pale yellow balloon with a long, thin tail, a flat white field and a flat Send button.
+
 **Improved in 0.3.7:** the speech balloons look more like the real thing. Classic is now the Office 97/2000 Assistant balloon, macOS matches a real macOS popover, Windows 98 uses its own system font, and System 7 text is a little larger. Text fields no longer light up while you type, and the Assistant Settings window keeps one size when you switch tabs.
 
 **New in 0.3.6:** no Ollama? The pet still keeps you company. Click it for jokes, riddles, little games and predictions, in English or Chinese to match your Mac, and poke it a few times in a row to see what happens. A new Chat switch in Assistant Settings > Behavior turns Ollama on or off.
