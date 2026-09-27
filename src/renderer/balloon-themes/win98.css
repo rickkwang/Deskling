@@ -1,11 +1,28 @@
 /* Windows 98: a raised silver panel with the Windows 3D frame (outer line
    light grey on the top and left, near-black on the bottom and right; inner
    line white and dark grey), a sunken white field, and a "Send" push button
-   drawn as the default button (the extra black frame), in Tahoma. Colours
-   and bevels as in 98.css (github.com/jdan/98.css), which matches the
-   Windows 98 system colours. */
+   drawn as the default button (the extra black frame), in MS Sans Serif
+   8 pt, the Windows 98 system font (Tahoma only arrived with Windows 2000).
+   Colours, bevels and the pixel font as in 98.css (github.com/jdan/98.css),
+   which matches the Windows 98 system colours. Text the font lacks
+   (Chinese, emoji) falls back to system fonts scaled down to match. */
+@font-face {
+  font-family: "MS Sans Serif 8";
+  src: url("fonts/ms_sans_serif.woff2") format("woff2");
+}
+@font-face {
+  font-family: "MS Sans Serif 8";
+  font-weight: bold;
+  src: url("fonts/ms_sans_serif_bold.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Win98 CJK";
+  src: local("PingFangSC-Regular");
+  size-adjust: 92%;
+}
 [data-theme="win98"] {
-  --font: 11px/1.45 Tahoma, "MS Sans Serif", Geneva, "PingFang SC", sans-serif;
+  --font: 11px/15px "MS Sans Serif 8", "Win98 CJK", sans-serif;
+  -webkit-font-smoothing: none;
   --face: #c0c0c0;
   --ink: #000;
   --hint: #808080;

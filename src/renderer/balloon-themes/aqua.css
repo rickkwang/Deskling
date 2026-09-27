@@ -15,19 +15,19 @@
   --shadow-blur: 2.5;
 }
 [data-theme="aqua"] #shape .fill { fill: url(#glass-fill); }
-[data-theme="aqua"] #shape .fill-top { stop-color: rgba(236, 246, 255, 0.88); }
-[data-theme="aqua"] #shape .fill-mid { stop-color: rgba(228, 243, 255, 0.84); }
-[data-theme="aqua"] #shape .fill-bottom { stop-color: rgba(196, 226, 252, 0.9); }
+[data-theme="aqua"] #shape .fill-top { stop-color: rgba(150, 200, 248, 0.82); }
+[data-theme="aqua"] #shape .fill-mid { stop-color: rgba(165, 210, 250, 0.78); }
+[data-theme="aqua"] #shape .fill-bottom { stop-color: rgba(185, 228, 255, 0.88); }
 [data-theme="aqua"] #shape .glass { display: inline; }
 [data-theme="aqua"] #shape .glow { fill: url(#glass-glow); }
-[data-theme="aqua"] #shape .glow-in { stop-color: rgba(120, 220, 255, 0.75); }
+[data-theme="aqua"] #shape .glow-in { stop-color: rgba(105, 215, 255, 0.95); }
 [data-theme="aqua"] #shape .glow-out { stop-color: rgba(140, 225, 255, 0); }
 [data-theme="aqua"] #shape .sheen { fill: url(#glass-sheen); }
-[data-theme="aqua"] #shape .sheen-top { stop-color: rgba(255, 255, 255, 0.95); }
-[data-theme="aqua"] #shape .sheen-bottom { stop-color: rgba(255, 255, 255, 0.25); }
+[data-theme="aqua"] #shape .sheen-top { stop-color: rgba(255, 255, 255, 0.92); }
+[data-theme="aqua"] #shape .sheen-bottom { stop-color: rgba(255, 255, 255, 0.12); }
 /* Stroked twice as wide and clipped to the shape: only the inner half shows. */
 [data-theme="aqua"] #shape .inner-rim { fill: none; stroke: rgba(255, 255, 255, 0.85); stroke-width: 2; }
-[data-theme="aqua"] #shape .rim { stroke: rgba(35, 85, 160, 0.62); }
+[data-theme="aqua"] #shape .rim { stroke: rgba(28, 88, 190, 0.78); }
 /* Only outside the glass (masked), or it would muddy the tint. */
 [data-theme="aqua"] #shape .shadow-soft { fill: rgba(0, 35, 90, 0.34); transform: translate(0, 2.5px); }
 
