@@ -1,3 +1,5 @@
+**Improved in 0.3.10:** the balloon folds away when you switch to another app, like the Office Assistant's, so you no longer have to click the pet to close it. A reply that arrives while you're away waits for you, a Claude Code notice stays until you've seen it, and anything you were typing is still there next time.
+
 **Improved in 0.3.9:** switching on Chat starts Ollama for you if it isn't running, and switching it off (or quitting Deskling) stops it again. An Ollama you started yourself keeps running; Deskling just frees the memory its model was using. Without Ollama, the pet's lines no longer stay on screen: they fold away on their own, however they came up.
 
 **Improved in 0.3.8:** the Classic balloon now looks like the Office Assistant's: a pale yellow balloon with a long, thin tail, a flat white field and a flat Send button.
