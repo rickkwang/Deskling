@@ -83,6 +83,7 @@ function openBubble({ focus = false } = {}) {
   balloonOpen = true;
   renderBalloon();
   window.pet.bubbleShow({ focus });
+  foldOffline();
 }
 
 function hideBubble() {
@@ -137,7 +138,21 @@ const showingOffline = () => Boolean(pokes.last) && content.text === pokes.last;
 function sayOffline() {
   const { text, gesture } = pokes.next(character.displayName);
   say(text);
+  foldOffline();
   return gesture;
+}
+
+// A line said without a model folds away on its own, however it came up
+// (a click, the greeting, a character switch, Ollama going away).
+const OFFLINE_SHOWN_MS = 7000; // plus reading time for longer lines
+let foldTimer = null;
+function foldOffline() {
+  if (!balloonOpen || !showingOffline()) return;
+  const shown = content.text;
+  clearTimeout(foldTimer);
+  foldTimer = setTimeout(() => {
+    if (balloonOpen && !busy && content.text === shown) hideBubble();
+  }, OFFLINE_SHOWN_MS + shown.length * 40);
 }
 
 // Asks main whether Ollama has come up (or gone away) since; once the pet can
@@ -395,8 +410,6 @@ function onPetClick() {
   openBubble({ focus: true });
 }
 
-const POKE_SHOWN_MS = 7000; // plus reading time for longer lines
-let pokeTimer = null;
 function poke() {
   const gesture = sayOffline();
   openBubble();
@@ -405,11 +418,6 @@ function poke() {
     runtime.act(gesture);
     backToWork();
   }
-  const shown = pokes.last;
-  clearTimeout(pokeTimer);
-  pokeTimer = setTimeout(() => {
-    if (balloonOpen && !busy && content.text === shown) hideBubble();
-  }, POKE_SHOWN_MS + shown.length * 40);
   if (settings.ollama !== false) checkAi();
 }
 
