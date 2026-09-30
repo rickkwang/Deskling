@@ -574,6 +574,7 @@ if (offline()) sayOffline();
 else say(greeting());
 if (settings.greeting) greeted.then(() => openBubble());
 greeted.then(() => { showNotice(); backToWork(); });
+if (offline() && settings.ollama !== false) checkAi(); // Ollama starting with the app
 
 if (selftest) {
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));

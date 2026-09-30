@@ -76,15 +76,18 @@ export class Assistant {
     this.models = [];
     this.model = null;
     this.status = { available: false };
-    this.enabled = true; // Settings > Behavior > Ollama; off, the pet only says preset lines
+    this.enabled = true; // Settings > Behavior > Chat; off, the pet only says preset lines
+    this.starting = null; // Ollama starting because chat came on
     this.persona = null;
     this.behavior = { responseStyle: 'normal', instructions: '', claudeCode: false };
     this.history = [];
     this.abort = null;
   }
 
-  async refresh(preferredModel = this.preferred) {
+  // wait: false answers with what's running now, not after Ollama starts.
+  async refresh(preferredModel = this.preferred, { wait = true } = {}) {
     this.preferred = preferredModel;
+    if (wait) await this.starting;
     this.status = await this.provider.detect();
     this.models = this.status.models;
     this.model = this.provider.pickModel(this.models, preferredModel);
@@ -101,9 +104,19 @@ export class Assistant {
     };
   }
 
+  // Starts Ollama when chat comes on and stops (or unloads) it when chat goes off.
   setEnabled(on) {
     this.enabled = Boolean(on);
-    if (!this.enabled) this.cancel();
+    if (this.enabled) this.starting = this.provider.start();
+    else {
+      this.cancel();
+      this.starting = null;
+      this.provider.stop(this.model);
+    }
+  }
+
+  quit() {
+    this.provider.stop(this.model);
   }
 
   setModel(name) {

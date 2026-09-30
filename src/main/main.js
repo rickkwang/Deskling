@@ -1021,7 +1021,8 @@ function registerIpc() {
     assistant.setPersona(character.data.persona);
     assistant.setEnabled(settings.ollama);
     assistant.setBehavior({ responseStyle: settings.responseStyle, instructions: settings.instructions, claudeCode: settings.claudeCode });
-    const ai = await assistant.refresh(settings.model);
+    // Not held up by Ollama starting: the pet says hello once it's up.
+    const ai = await assistant.refresh(settings.model, { wait: false });
     return { character, ai, settings: publicSettings(), selftest: SELFTEST && { quiet: process.argv.includes('--quiet'), edge: process.argv.includes('--edge') || process.argv.includes('--edge-open'), edgeOpen: process.argv.includes('--edge-open'), hold: Number(arg('hold') || 2500) } };
   });
 
@@ -1211,3 +1212,4 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => app.quit());
+app.on('will-quit', () => assistant.quit());

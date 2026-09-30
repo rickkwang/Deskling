@@ -302,12 +302,14 @@ function renderModels() {
     $('#model-note').textContent = 'Local Ollama model';
   } else {
     modelSelect.add(new Option(ai.available ? 'No local models' : 'Ollama not running', ''));
-    $('#model-note').textContent = ai.available ? 'Pull one with ollama pull' : 'Start it with ollama serve';
+    $('#model-note').textContent = ai.available ? 'Pull one with ollama pull' : 'Install it from ollama.com';
   }
   modelSelect.disabled = !ai.models.length || !settings.ollama;
 }
-// Switched on: look again, Ollama may have started since Settings opened.
+// Switched on: Ollama starts if it isn't running; look again once it's up.
+// The setting goes first, so main starts it before answering.
 $('#ollama').addEventListener('change', async (e) => {
+  window.pet.setSettings({ ollama: e.target.checked });
   if (e.target.checked) ai = await window.pet.aiStatus();
   renderModels();
 });
@@ -351,7 +353,6 @@ bind('#greeting', 'greeting');
 bind('#speech', 'speech');
 bind('#style', 'responseStyle', 'value');
 bind('#model', 'model', 'value');
-bind('#ollama', 'ollama');
 bind('#claude-code', 'claudeCode');
 
 // Claude Code: the switch adds or removes Deskling's hooks in Claude Code's

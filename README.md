@@ -8,7 +8,9 @@ A lightweight desktop pet that is also an AI assistant. It uses Microsoft Agent 
 
 Download the latest `.dmg` from [Releases](https://github.com/rickkwang/Deskling/releases) (Apple silicon Macs),
 open it and drag Deskling to Applications. You also need [Ollama](https://ollama.com) with a model, e.g.
-`ollama pull qwen2.5:1.5b`.
+`ollama pull qwen2.5:1.5b`. With Chat on (Settings), Deskling starts Ollama if it isn't running, and stops
+it again when Chat goes off or Deskling quits; an Ollama you started yourself keeps running (the model is
+unloaded).
 
 Deskling isn't signed with an Apple Developer ID, so macOS blocks the first launch: click **Done**, then
 **System Settings → Privacy & Security → Open Anyway**. If macOS says the app "is damaged", run
