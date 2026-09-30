@@ -1,3 +1,5 @@
+**Improved in 0.3.9:** switching on Chat starts Ollama for you if it isn't running, and switching it off (or quitting Deskling) stops it again. An Ollama you started yourself keeps running; Deskling just frees the memory its model was using. Without Ollama, the pet's lines no longer stay on screen: they fold away on their own, however they came up.
+
 **Improved in 0.3.8:** the Classic balloon now looks like the Office Assistant's: a pale yellow balloon with a long, thin tail, a flat white field and a flat Send button.
 
 **Improved in 0.3.7:** the speech balloons look more like the real thing. Classic is now the Office 97/2000 Assistant balloon, macOS matches a real macOS popover, Windows 98 uses its own system font, and System 7 text is a little larger. Text fields no longer light up while you type, and the Assistant Settings window keeps one size when you switch tabs.
