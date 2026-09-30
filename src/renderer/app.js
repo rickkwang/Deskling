@@ -121,8 +121,15 @@ function listen() {
 window.pet.onBubbleSubmit((text) => ask(text));
 // Listening lasts while the user is in Deskling; once they go to another app
 // (to Claude Code, say), the pet is free again, and back to work if Claude is
-// busy.
-window.pet.onAway(() => { if (runtime.state === 'listening' && !busy) runtime.setState('idle'); });
+// busy. The balloon folds away too, like the Office Assistant's when you click
+// back into the document: it only fires after the user was here, so a reply
+// that came while they were away waits for them. A reply still coming and a
+// Claude Code notice (open until seen) stay; a half-typed question is kept.
+window.pet.onAway(() => {
+  if (busy) return;
+  if (runtime.state === 'listening') runtime.setState('idle');
+  if (balloonOpen && !showingNotice()) hideBubble();
+});
 window.pet.onBubbleTyping(() => listen());
 window.pet.onBubbleEscape(() => closeBubble());
 
