@@ -45,7 +45,7 @@ const assistant = new Assistant();
 
 const settingsFile = () => path.join(app.getPath('userData'), 'settings.json');
 let settings = {
-  character: 'clippy', model: null,
+  character: 'clawd', model: null,
   // Screen point where the pet's feet stand (the window is laid out around it).
   petX: null, petY: null,
   scale: 1,
@@ -156,7 +156,7 @@ function characterCard(entry) {
 
 function loadCharacter(id) {
   const all = listCharacters();
-  const entry = all.find((c) => c.id === id) || all.find((c) => c.id === 'clippy') || all[0];
+  const entry = all.find((c) => c.id === id) || all.find((c) => c.id === 'clawd') || all[0];
   const data = JSON.parse(fs.readFileSync(path.join(entry.dir, 'character.json'), 'utf8'));
   return { data, sheetUrl: sheetUrl(entry.dir, data.spritesheet.path) };
 }
@@ -586,7 +586,7 @@ async function deleteCharacter(id) {
     cancelId: 1,
   });
   if (response !== 0) return false;
-  if (id === settings.character) updateSettings({ character: 'clippy' });
+  if (id === settings.character) updateSettings({ character: 'clawd' });
   fs.rmSync(entry.dir, { recursive: true, force: true });
   charactersChanged();
   return true;

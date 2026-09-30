@@ -2,7 +2,7 @@
 
 *A little creature that lives on your desktop.*
 
-A lightweight desktop pet that is also an AI assistant. It uses Microsoft Agent characters (Clippy by default) and a model already installed in your local Ollama.
+A lightweight desktop pet that is also an AI assistant. It comes with Clawd (the default) and the Microsoft Agent characters, and uses a model already installed in your local Ollama.
 
 ## Install
 
@@ -87,6 +87,9 @@ Bundled: Clippy, Links, Rover, Merlin, Genie, Peedy, Genius, Rocky, F1 (frame ta
 [clippy.js](https://github.com/clippyjs/clippy.js), MIT) and Office Logo (from [ryOS](https://github.com/ryokun6/ryos)),
 converted with `npm run import:clippyjs -- <agents dir>`. The character art is Microsoft's and is included
 for local, non-commercial use only; each `character.json` records its `provenance`.
+
+Clawd, the default character, is rendered from the animations on [claude.dev](https://claude.dev/). The character art is
+Anthropic's and is included for local, non-commercial use only.
 
 The speech balloon themes follow Apple's and Microsoft's own guidelines and system colours; their sources, and the
 bundled Geneva 9 / Chicago 12 bitmap fonts (by Giles Booth, CC BY) and Windows 98 scroll-bar art (98.css, MIT), are
