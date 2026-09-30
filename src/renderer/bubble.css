@@ -31,11 +31,10 @@ body { padding: 14px; } /* main.js BALLOON_MARGIN */
   font: var(--font);
   color: var(--ink);
   transform-origin: var(--tail-left) 0;
-  /* Hidden: faded out, slightly tucked into the tail. Transitions (rather
-     than keyframes) reverse smoothly when interrupted. Leaving eases out... */
+  /* Hidden: faded out, slightly tucked into the tail. Main fades the whole
+     window out first (main.js), so this is put away at once, unseen... */
   opacity: 0;
   transform: translateY(-4px) scale(0.96);
-  transition: opacity 180ms cubic-bezier(0.4, 0, 0.6, 1), transform 180ms cubic-bezier(0.4, 0, 0.6, 1);
 }
 body.above #bubble { transform-origin: var(--tail-left) 100%; transform: translateY(4px) scale(0.96); }
 

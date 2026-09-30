@@ -255,13 +255,17 @@ const BALLOON_MARGIN = 14; // band around the box in its window (shadow + tail; 
 const EDGE_GAP = 12; // breathing room between the balloon and the screen edge
 const TIP_GAP = 8; // tail tip to the pet's feet (below) or head (above)
 const CORNER_TIP = 2; // a corner tail's tip, in from the balloon's side
-// The balloon window stays on screen once created; showing and hiding the
-// balloon are CSS transitions inside it (bubble.css), with clicks passing
-// through while it is hidden. Ordering a window in and out makes macOS drop
-// the first frames of an entrance, and a transition can reverse mid-way.
+// The balloon window stays on screen once created, with clicks passing
+// through while it is hidden: ordering a window in and out makes macOS drop
+// the first frames of an entrance. Showing is a CSS transition inside it
+// (bubble.css). Leaving fades the window itself: while the user switches to
+// another app (Stage Manager especially), macOS can hold back the window's
+// new frames for over half a second, so a CSS fade would stall, then vanish
+// at once; the window server applies the window's opacity regardless.
 // A fading balloon rides along with the pet at a fixed offset (a plain window
 // move each frame; re-laying it out while it animates drops frames).
-const LEAVE_MS = 180; // fade-out (bubble.css)
+const LEAVE_MS = 180;
+const RETURN_MS = 160; // back up, when shown again mid-fade
 const balloon = { visible: false, h: 90, hiddenForDrag: false, side: 'below', content: null, shown: false, placed: '', follow: null };
 
 function createBubbleWindow() {
@@ -350,7 +354,11 @@ function showBalloon({ focus = false } = {}) {
   placeBalloon();
   bubbleWin.setIgnoreMouseEvents(false);
   if (!bubbleWin.isVisible()) bubbleWin.showInactive();
-  if (opening) bubbleWin.webContents.send('bubble:open', true);
+  if (opening && fade) fadeWindow(1, RETURN_MS); // caught while fading out: its content is still up
+  else if (opening) {
+    bubbleWin.setOpacity(1);
+    bubbleWin.webContents.send('bubble:open', true);
+  }
   if (focus) {
     bubbleWin.focus();
     bubbleWin.webContents.send('bubble:focus');
@@ -366,11 +374,31 @@ function fadeOutBalloon() {
   if (!balloon.shown) return;
   balloon.shown = false;
   bubbleWin.setIgnoreMouseEvents(true);
-  bubbleWin.webContents.send('bubble:open', false);
+  // Faded out, the content is put away unseen, ready for the next entrance.
+  fadeWindow(0, LEAVE_MS, () => bubbleWin.webContents.send('bubble:open', false));
   const [bx, by] = bubbleWin.getPosition();
   const [px, py] = win.getPosition();
   stopFollowing();
   balloon.follow = { dx: bx - px, dy: by - py, timer: setTimeout(stopFollowing, LEAVE_MS + 20) };
+}
+
+// Eases the balloon window's opacity to `to`, from wherever it is now.
+let fade = null;
+function fadeWindow(to, ms, done) {
+  clearInterval(fade);
+  const from = bubbleWin.getOpacity();
+  const start = Date.now();
+  const ease = (k) => (k < 0.5 ? 2 * k * k : 1 - 2 * (1 - k) ** 2);
+  fade = setInterval(() => {
+    // Quitting destroys the window mid-fade (leaving Deskling folds it).
+    if (bubbleWin.isDestroyed()) return clearInterval(fade);
+    const k = Math.min(1, (Date.now() - start) / ms);
+    bubbleWin.setOpacity(from + (to - from) * ease(k));
+    if (k < 1) return;
+    clearInterval(fade);
+    fade = null;
+    done?.();
+  }, 8);
 }
 
 function stopFollowing() {

@@ -83,7 +83,7 @@ function openBubble({ focus = false } = {}) {
   balloonOpen = true;
   renderBalloon();
   window.pet.bubbleShow({ focus });
-  foldOffline();
+  foldLine();
 }
 
 function hideBubble() {
@@ -102,6 +102,7 @@ function closeBubble() {
 function say(text, { error = false, link = false } = {}) {
   content = { text, error, dots: false, link };
   renderBalloon();
+  foldLine();
 }
 
 // A random line from the character's greetings, never the same one twice in a row.
@@ -145,21 +146,22 @@ const showingOffline = () => Boolean(pokes.last) && content.text === pokes.last;
 function sayOffline() {
   const { text, gesture } = pokes.next(character.displayName);
   say(text);
-  foldOffline();
   return gesture;
 }
 
-// A line said without a model folds away on its own, however it came up
-// (a click, the greeting, a character switch, Ollama going away).
-const OFFLINE_SHOWN_MS = 7000; // plus reading time for longer lines
+// A hello, or a line said without a model, folds away on its own, however it
+// came up (a click, the app starting, a character switch, Ollama going away):
+// it often shows while the user is in another app, where leaving Deskling
+// never happens to fold it. Not while they're about to type (listening).
+const LINE_SHOWN_MS = 7000; // plus reading time for longer lines
 let foldTimer = null;
-function foldOffline() {
-  if (!balloonOpen || !showingOffline()) return;
+function foldLine() {
+  if (!balloonOpen || !(showingOffline() || (lastGreeting && content.text === lastGreeting))) return;
   const shown = content.text;
   clearTimeout(foldTimer);
   foldTimer = setTimeout(() => {
-    if (balloonOpen && !busy && content.text === shown) hideBubble();
-  }, OFFLINE_SHOWN_MS + shown.length * 40);
+    if (balloonOpen && !busy && content.text === shown && runtime.state !== 'listening') hideBubble();
+  }, LINE_SHOWN_MS + shown.length * 40);
 }
 
 // Asks main whether Ollama has come up (or gone away) since; once the pet can
