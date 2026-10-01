@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Assistant, RESPONSE_STYLES } from '../ai/assistant.js';
 import { DragFollower } from './drag-follow.js';
-import { startNativeDrag } from './native-drag.js';
+import { leftButtonDown, startNativeDrag } from './native-drag.js';
 import { FocusTimer, LIMITS, validSeconds, PRESETS, SOUNDS, duration, minutesLeft } from './focus-timer.js';
 import { checkForUpdate, prepareInstall, releasePage } from './updater.js';
 import { ClaudeSessions, claudeSettingsFile, hooksInstalled, listen, readClaudeSettings, setHooks } from './claude-code.js';
@@ -1034,6 +1034,8 @@ let press = null;
 let dragTimer = null;
 // Set while macOS itself drags the pet window (native-drag.js).
 let nativeDrag = null;
+// Ends that drag when the button comes up (see drag:start).
+let releaseWatch = null;
 
 const follower = new DragFollower();
 
@@ -1048,6 +1050,38 @@ function followCursor() {
   if (SELFTEST && process.argv.includes('--trace-drag')) {
     const [nx, ny] = win.getPosition();
     console.log(`[drag] cursor ${c.x},${c.y} feet ${feet.x},${feet.y} set ${pos.x},${pos.y} got ${nx},${ny}`);
+  }
+}
+
+// The pet was dropped: keep it on screen, remember the spot, reopen the balloon.
+function endDrag() {
+  if (!dragTimer && !nativeDrag) return;
+  clearInterval(releaseWatch);
+  releaseWatch = null;
+  if (win.isDestroyed()) return; // quit mid-drag
+  if (dragTimer) followCursor();
+  clearInterval(dragTimer);
+  dragTimer = null;
+  const [x, y] = win.getPosition();
+  // macOS lets a window be dropped partly off screen: bring the pet back in.
+  const feet = clampFeet({ x: x + anchor.x, y: y + anchor.y });
+  if (nativeDrag) win.setPosition(feet.x - anchor.x, feet.y - anchor.y);
+  settings.petX = feet.x;
+  settings.petY = feet.y;
+  saveSettings();
+  // The balloon stayed on the desktop the pet was dragged away from. Joining
+  // every space and leaving again moves a window to the active one (not in
+  // the same turn: macOS 27 ignores that).
+  if (nativeDrag?.spaceChanged && bubbleWin && !bubbleWin.isDestroyed()) {
+    bubbleWin.setVisibleOnAllWorkspaces(true, { skipTransformProcessType: true });
+    setTimeout(() => {
+      if (!bubbleWin.isDestroyed()) bubbleWin.setVisibleOnAllWorkspaces(false, { skipTransformProcessType: true });
+    }, 100);
+  }
+  nativeDrag = null;
+  if (balloon.hiddenForDrag) {
+    balloon.hiddenForDrag = false;
+    if (balloon.visible) showBalloon();
   }
 }
 
@@ -1073,7 +1107,9 @@ function registerIpc() {
   // Press: remember where the cursor and the feet were. Start: macOS drags the
   // window like any other, so holding it at the side of the screen takes it to
   // the next desktop. Elsewhere, follow the cursor at display refresh rate.
-  // Either way the drag lasts until the renderer reports the release.
+  // macOS's drag lasts until the mouse button comes up, which main watches
+  // itself: once macOS has the drag, the page can lose the pointer early or
+  // never see the release. The other lasts until the page reports the release.
   ipcMain.on('drag:press', () => {
     const [x, y] = win.getPosition();
     press = { cursor: screen.getCursorScreenPoint(), feet: { x: x + anchor.x, y: y + anchor.y } };
@@ -1088,7 +1124,11 @@ function registerIpc() {
     clearInterval(dragTimer);
     dragTimer = null;
     nativeDrag = startNativeDrag(win) ? { spaceChanged: false } : null;
-    if (nativeDrag) return;
+    if (nativeDrag) {
+      clearInterval(releaseWatch);
+      releaseWatch = setInterval(() => { if (!leftButtonDown()) endDrag(); }, 16);
+      return;
+    }
     follower.reset();
     // Follow at the display's refresh rate (8 ms on 120 Hz screens).
     const hz = screen.getDisplayNearestPoint(press.cursor).displayFrequency || 60;
@@ -1096,31 +1136,8 @@ function registerIpc() {
     followCursor();
   });
   ipcMain.handle('drag:end', () => {
-    if (!dragTimer && !nativeDrag) return;
-    if (dragTimer) followCursor();
-    clearInterval(dragTimer);
-    dragTimer = null;
-    const [x, y] = win.getPosition();
-    // macOS lets a window be dropped partly off screen: bring the pet back in.
-    const feet = clampFeet({ x: x + anchor.x, y: y + anchor.y });
-    if (nativeDrag) win.setPosition(feet.x - anchor.x, feet.y - anchor.y);
-    settings.petX = feet.x;
-    settings.petY = feet.y;
-    saveSettings();
-    // The balloon stayed on the desktop the pet was dragged away from. Joining
-    // every space and leaving again moves a window to the active one (not in
-    // the same turn: macOS 27 ignores that).
-    if (nativeDrag?.spaceChanged && bubbleWin && !bubbleWin.isDestroyed()) {
-      bubbleWin.setVisibleOnAllWorkspaces(true, { skipTransformProcessType: true });
-      setTimeout(() => {
-        if (!bubbleWin.isDestroyed()) bubbleWin.setVisibleOnAllWorkspaces(false, { skipTransformProcessType: true });
-      }, 100);
-    }
-    nativeDrag = null;
-    if (balloon.hiddenForDrag) {
-      balloon.hiddenForDrag = false;
-      if (balloon.visible) showBalloon();
-    }
+    if (nativeDrag && leftButtonDown()) return;
+    endDrag();
   });
   ipcMain.handle('win:layout', (_e, geo) => layoutWindow(geo));
 

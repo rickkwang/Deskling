@@ -50,3 +50,14 @@ export function startNativeDrag(win) {
     return false;
   }
 }
+
+// Whether the left mouse button is held right now (false off macOS).
+export function leftButtonDown() {
+  const o = load();
+  if (!o) return false;
+  try {
+    return (Number(o.send(o.cls('NSEvent'), o.sel('pressedMouseButtons'))) & 1) === 1;
+  } catch {
+    return false;
+  }
+}
