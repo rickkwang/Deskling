@@ -200,10 +200,14 @@ let anchor = { x: WIN_W - 16 - 58, y: 360 };
 let headroom = 0;
 
 function layoutWindow({ width, height, anchorX, anchorY, petW, petH, top = 0 }) {
+  // While macOS drags the pet, its feet stay where they are: the saved spot
+  // is still where the drag began.
+  const [wx, wy] = win.getPosition();
+  const held = nativeDrag && { x: wx + anchor.x, y: wy + anchor.y };
   anchor = { x: anchorX, y: anchorY };
   headroom = top;
   if (petW && petH) petBox = { w: petW, h: petH };
-  const p = petPoint();
+  const p = held || petPoint();
   if (SELFTEST && process.argv.includes('--trace-drag')) console.log(`[layout] ${Date.now() % 100000} ${width}x${height} anchor ${anchorX},${anchorY} feet ${p.x},${p.y}`);
   win.setBounds({ x: Math.round(p.x - anchorX), y: Math.round(p.y - anchorY), width, height });
   if (SELFTEST && process.argv.includes('--trace-drag')) console.log(`[layout] set ${Math.round(p.x - anchorX)},${Math.round(p.y - anchorY)} got ${JSON.stringify(win.getBounds())}`);
