@@ -170,22 +170,28 @@ test('exit takes a same-looking frame nearer the end instead of playing the long
   assert.ok(seen.length <= 4, `rewound through ${seen}`);
 });
 
-test('a long exit path plays faster to finish within the budget', async () => {
-  // No same-looking frames to skip to: 40 frames x 100 ms = 4 s of exit.
-  const frames = Array.from({ length: 41 }, (_, i) => ({ duration: 100, cells: [[i, 0]] }));
-  const c = { spritesheet: { cellWidth: 1, cellHeight: 1 }, animations: { A: { frames } } };
-  const player = new AnimationPlayer(el(), c, 'x.png');
-  const shown = [];
-  const show = player._show.bind(player);
-  player._show = (i) => { shown.push(i); show(i); };
-  const result = player.play('A');
-  while (!player.current) await wait(1);
-  player.exit();
-  const t0 = Date.now();
-  assert.equal(await result, 'done');
-  const took = Date.now() - t0;
-  assert.ok(took < 1400, `exit took ${took} ms`);
-  assert.equal(shown.length, 41, 'every frame still shown, just faster');
+test('an exit path keeps its authored pace; one too long is cut, never fast-forwarded', async () => {
+  // No same-looking frames to skip to: 100 ms a frame.
+  const exit = async (count) => {
+    const frames = Array.from({ length: count }, (_, i) => ({ duration: 100, cells: [[i, 0]] }));
+    const c = { spritesheet: { cellWidth: 1, cellHeight: 1 }, animations: { A: { frames } } };
+    const player = new AnimationPlayer(el(), c, 'x.png');
+    const shown = [];
+    const show = player._show.bind(player);
+    player._show = (i) => { shown.push(i); show(i); };
+    const result = player.play('A');
+    while (!player.current) await wait(1);
+    player.exit();
+    const t0 = Date.now();
+    assert.equal(await result, 'done');
+    return { took: Date.now() - t0, shown: shown.length };
+  };
+  const short = await exit(9); // 0.8 s of exit
+  assert.ok(short.took >= 750, `exit took ${short.took} ms`);
+  assert.equal(short.shown, 9, 'every frame shown');
+  const long = await exit(41); // 4 s of exit
+  assert.ok(long.took < 300, `exit took ${long.took} ms`);
+  assert.equal(long.shown, 1, 'no frames raced through');
 });
 
 test('a frame held for seconds lets go when the animation exits', async () => {
@@ -218,8 +224,8 @@ test('a Return keeps its pace unless something is waiting on it', async () => {
   const idle = await timeReturn(false);
   assert.ok(idle >= 1500, `nothing waiting: authored pace (${idle} ms)`);
   const hurried = await timeReturn(true);
-  // 50 ms in, 1.2 s of path is left: squeezed into the 1 s budget.
-  assert.ok(hurried < 1300, `interrupted: hurried (${hurried} ms)`);
+  // 50 ms in, 1.2 s of path is left: too long to wait for, so it ends there.
+  assert.ok(hurried < 400, `interrupted: cut short (${hurried} ms)`);
 });
 
 // Entrances and exits as ryOS plays them: Office characters come and go with

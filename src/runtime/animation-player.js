@@ -7,8 +7,9 @@
 //   are deterministic, so their length is known up front. When something is
 //   waiting on the exit (exit(), or a Return before the next animation), a
 //   long path starts from an identical-looking frame nearer the end if there
-//   is one, plays faster to finish within EXIT_BUDGET_MS, and a frame held on
-//   screen lets go; a Return with nothing waiting keeps its authored pace;
+//   is one, and a frame held on screen lets go; frames always keep their
+//   authored pace (nothing is fast-forwarded), so a path still longer than
+//   EXIT_BUDGET_MS is cut short: the next animation starts right away;
 // - when an animation ends, its last visible frame stays on screen;
 // - Return animations: an animation that ends away from the neutral pose
 //   (`useExitBranching` or an explicit `returnAnimation`) is returned to
@@ -16,7 +17,7 @@
 
 import { exitNext } from '../character/exit.js';
 
-const EXIT_BUDGET_MS = 1000; // a longer exit path plays faster to fit
+const EXIT_BUDGET_MS = 1000; // a longer exit path is cut when something waits on it
 const HOLD_MS = 100; // on exit, a frame still held longer than this lets go
 const EXIT_TIMEOUT_MS = 2000; // an exit path that never ends (bad data) is cut...
 const FADE_MS = 90; // ...with a quick dip out and back in, not a jump
@@ -103,8 +104,9 @@ export class AnimationPlayer {
   // Sets out how the current animation exits. In a hurry: from the frame on
   // screen, or from a frame drawn with the same cells whose exit path is
   // shorter (many exits rewind through the frames that led in, so the pose
-  // recurs nearer the end), a path longer than EXIT_BUDGET_MS playing
-  // proportionally faster. Either way, a path that loops is cut after a while.
+  // recurs nearer the end), and a path still longer than EXIT_BUDGET_MS
+  // (animations without exit branches exit through all their remaining
+  // frames) ends here. Either way, a path that loops is cut after a while.
   _planExit(cur, hurry) {
     cur.hurry = hurry;
     clearTimeout(cur.exitTimer);
@@ -119,7 +121,7 @@ export class AnimationPlayer {
     });
     if (from !== cur.index) cur.index = cur.shown = from; // looks the same
     if (ms === Infinity) cur.exitTimer = setTimeout(() => this._timeUp(), EXIT_TIMEOUT_MS);
-    else if (hurry) cur.speed = Math.min(1, EXIT_BUDGET_MS / ms);
+    else if (hurry && ms > EXIT_BUDGET_MS) cur.exitTimer = setTimeout(() => { if (this.current === cur) this._finish('done'); });
   }
 
   cut() {
@@ -132,7 +134,7 @@ export class AnimationPlayer {
 
   _run(name, anim, index, exiting, { resume = false, hurry = false } = {}) {
     return new Promise((resolve) => {
-      this.current = { name, anim, index, shown: index, exiting, isReturn: resume, resolve, speed: 1, frameEnds: 0 };
+      this.current = { name, anim, index, shown: index, exiting, isReturn: resume, resolve, frameEnds: 0 };
       if (exiting) this._planExit(this.current, hurry);
       if (resume) this._advance();
       else this._show(index);
@@ -177,9 +179,8 @@ export class AnimationPlayer {
       cur.shown = index;
       this._draw(frame.cells);
     }
-    const ms = frame.duration * cur.speed;
-    cur.frameEnds = performance.now() + ms;
-    this.timer = setTimeout(() => this._advance(), ms);
+    cur.frameEnds = performance.now() + frame.duration;
+    this.timer = setTimeout(() => this._advance(), frame.duration);
   }
 
   _advance() {
