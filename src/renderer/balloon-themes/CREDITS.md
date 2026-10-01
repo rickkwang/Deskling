@@ -11,6 +11,8 @@ Each theme follows its platform's own documentation or measurements:
   [98.css](https://github.com/jdan/98.css).
 - **System 7**: *Inside Macintosh: More Macintosh Toolbox*, Help Manager,
   figures 3-2 to 3-9 (balloon shape, corner tip, shadow, 9-point Geneva).
+- **Claude**: the Claude app's look (Anthropic): ivory paper, clay accent,
+  serif replies. Falls back to the system serif; no fonts are bundled.
 
 ## Bundled files
 

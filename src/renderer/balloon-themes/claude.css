@@ -1,0 +1,85 @@
+/* Claude: the Claude app's warm paper look. An ivory surface with a hairline
+   warm-grey edge, generous corners and a soft low shadow; the reply set in a
+   serif, as Claude's answers are; a white composer field with a clay send
+   button carrying the up arrow. Light or dark with the system appearance. */
+[data-theme="claude"] {
+  --font: 13.5px/1.5 "Anthropic Serif", "Tiempos Text", ui-serif, "New York", Georgia, "Songti SC", serif;
+  --ui-font: 13px/1.3 "Anthropic Sans", "Styrene B", system-ui, -apple-system, "PingFang SC", sans-serif;
+  --surface: #faf9f5;
+  --ink: #141413;
+  --hint: #87867f;
+  --rule: rgba(31, 30, 29, 0.1);
+  --edge: rgba(31, 30, 29, 0.18);
+  --field: #fff;
+  --field-edge: rgba(31, 30, 29, 0.15);
+  --clay: #d97757;
+  --clay-deep: #c6613f;
+  --link-hover: var(--clay-deep);
+  --error: #b53333;
+  --radius: 14;
+  --tail-shape: popover;
+  --shadow-blur: 4;
+  -webkit-font-smoothing: antialiased;
+}
+@media (prefers-color-scheme: dark) {
+  [data-theme="claude"] {
+    --surface: #30302e;
+    --ink: #faf9f5;
+    --hint: #9c9a92;
+    --rule: rgba(222, 220, 209, 0.12);
+    --edge: rgba(222, 220, 209, 0.22);
+    --field: #262624;
+    --field-edge: rgba(222, 220, 209, 0.16);
+    --error: #e87b7b;
+    --link-hover: #e8957a; /* lighter than clay: readable on the dark surface */
+  }
+}
+[data-theme="claude"] #shape .fill { fill: var(--surface); }
+[data-theme="claude"] #shape .rim { stroke: var(--edge); stroke-width: 0.75; }
+[data-theme="claude"] #shape .shadow-soft { fill: rgba(20, 20, 19, 0.16); transform: translate(0, 2px); }
+
+[data-theme="claude"] ::selection { background: rgba(217, 119, 87, 0.28); }
+
+/* Scrolled text fades out under the rounded top and above the composer
+   (within the padding, so unscrolled text is untouched). */
+[data-theme="claude"] #msg {
+  padding: 12px 15px 11px;
+  -webkit-mask-image: linear-gradient(transparent, #000 11px, #000 calc(100% - 10px), transparent);
+  mask-image: linear-gradient(transparent, #000 11px, #000 calc(100% - 10px), transparent);
+}
+[data-theme="claude"] #msg.link {
+  text-decoration: underline 1px;
+  -webkit-text-decoration-color: var(--clay);
+  text-decoration-color: var(--clay);
+  text-underline-offset: 3px;
+}
+[data-theme="claude"] #msg.link:hover { color: var(--link-hover); }
+
+/* Waiting: the sweep is clay, like Claude's spark while it thinks. */
+[data-theme="claude"] .dots {
+  background-image: linear-gradient(90deg, var(--hint) 0 35%, var(--clay) 50%, var(--hint) 65% 100%);
+}
+
+[data-theme="claude"] #ask { gap: 7px; padding: 9px; font: var(--ui-font); }
+
+/* The composer: a white rounded field (no focus ring while typing). */
+[data-theme="claude"] #input {
+  height: 28px;
+  border: 1px solid var(--field-edge);
+  border-radius: 9px;
+  background: var(--field);
+  padding: 0 9px;
+}
+
+[data-theme="claude"] #send {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: var(--clay);
+  color: #fff;
+  transition: background 120ms, opacity 120ms;
+}
+[data-theme="claude"] #send .send-icon { width: 14px; height: 14px; }
+[data-theme="claude"] #send:disabled { opacity: 0.45; }
+[data-theme="claude"] #send:not(:disabled):hover { background: var(--clay-deep); }
+[data-theme="claude"] #send:not(:disabled):active { filter: brightness(0.92); }

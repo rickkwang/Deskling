@@ -104,3 +104,29 @@
 [data-theme="system7"] #timer { -webkit-font-smoothing: none; }
 [data-theme="system7"] #timer:active { background: #000; color: #fff; }
 [data-theme="system7"] #timer:active .glyph { fill: #fff; }
+
+/* Claude: ivory paper with a hairline warm edge; clay for focus. */
+[data-theme="claude"] {
+  --pill-bg: #faf9f5;
+  --pill-hover: #f0eee6;
+  --pill-ink: #141413;
+  --pill-edge: 0.5px solid rgba(31, 30, 29, 0.25);
+  --pill-radius: 10px;
+  --pill-shadow: 0 2px 8px rgba(20, 20, 19, 0.14);
+  --pill-font: 600 11px/1 "Anthropic Sans", system-ui, -apple-system, "PingFang SC", sans-serif;
+  --pill-track: rgba(31, 30, 29, 0.14);
+  --pill-focus-color: #d97757;
+  --pill-break-color: #788c5d;
+  --pill-focus: rgba(217, 119, 87, 0.6);
+  -webkit-font-smoothing: antialiased;
+}
+@media (prefers-color-scheme: dark) {
+  [data-theme="claude"] {
+    --pill-bg: #30302e;
+    --pill-hover: #3a3a37;
+    --pill-ink: #faf9f5;
+    --pill-edge: 0.5px solid rgba(222, 220, 209, 0.25);
+    --pill-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    --pill-track: rgba(222, 220, 209, 0.2);
+  }
+}

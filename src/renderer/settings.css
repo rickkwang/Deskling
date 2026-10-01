@@ -354,12 +354,12 @@ input[type="range"]::-webkit-slider-thumb {
 input[type="range"]:focus-visible { outline: none; }
 input[type="range"]:focus-visible::-webkit-slider-thumb { outline: 2px solid var(--clay); outline-offset: 2px; }
 
-/* Balloon style: five miniatures of the speech balloon, each in its theme's
+/* Balloon style: six miniatures of the speech balloon, each in its theme's
    colours and type (the real ones are src/renderer/balloon-themes/). */
 .balloons {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
 }
 .balloons .tile { padding: 10px 2px 7px; gap: 8px; }
 
@@ -435,6 +435,15 @@ input[type="range"]:focus-visible::-webkit-slider-thumb { outline: 2px solid var
   --mini-radius: 5px;
   --mini-shadow: 1px 1px 0 #000;
   --mini-font: Geneva, sans-serif;
+}
+
+.mini-claude {
+  --mini-bg: #faf9f5;
+  --mini-edge: rgba(31, 30, 29, 0.22);
+  --mini-radius: 9px;
+  --mini-shadow: 0 2px 5px rgba(20, 20, 19, 0.12);
+  --mini-font: ui-serif, Georgia, serif;
+  color: #141413;
 }
 
 .tip { color: var(--muted); font-size: 11.5px; margin: 10px 4px 0; }
