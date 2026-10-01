@@ -1,3 +1,5 @@
+**Improved in 0.3.14:** the balloon's scroll bar now fades in and out smoothly (it used to stick or go missing), the speech balloons are redrawn as real glass (macOS), a drop of gel (Aqua) and closer to the originals (Classic, Windows 98), and the System 7 scroll bar joins its corner tail. The pet now knows what a small local model can and can't do, so it answers "what can you do?" concretely, and Clawd introduces itself as Claude's mascot. Size in Settings now moves in steps of 5% and stops at 125%.
+
 **Improved in 0.3.13:** clicking the pet now plays a random one of its animations, a Claude Code notice is no longer a link to your terminal, and a drag that macOS takes over (such as a switch of desktop) now ends when you let go of the mouse button.
 
 **New in 0.3.12:** drag the pet to another desktop like any window: hold it at the side of the screen and it goes to the next desktop with you. Clawd, the pixel crab, is now the default character, and there is a new Claude balloon style in Assistant Settings.
