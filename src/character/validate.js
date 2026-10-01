@@ -93,6 +93,12 @@ export function validateCharacter(c, { sheetSize } = {}) {
     else idle.levels.forEach((lvl, i) => lvl.forEach((n) => { if (!anims[n]) err(`idle.levels[${i}] references missing animation "${n}"`); }));
   }
 
+  for (const key of ['open', 'close']) {
+    const list = c.click?.[key];
+    if (list === undefined) continue;
+    if (!Array.isArray(list)) err(`click.${key} must be a list of animation names`);
+    else for (const n of list) if (!anims[n]) err(`click.${key} references missing animation "${n}"`);
+  }
   if (!c.persona?.systemPrompt) err('persona.systemPrompt is required');
   const greetings = c.persona?.greetings;
   if (!Array.isArray(greetings) || !greetings.length || !greetings.every((g) => typeof g === 'string' && g.trim())) {

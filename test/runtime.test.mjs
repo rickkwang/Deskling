@@ -228,9 +228,9 @@ test('a Return keeps its pace unless something is waiting on it', async () => {
   assert.ok(hurried < 400, `interrupted: cut short (${hurried} ms)`);
 });
 
-// Entrances and exits as ryOS plays them: Office characters come and go with
-// Greeting / Goodbye (their Show and Hide are a few frames that pop); Agent
-// and XP characters appear with Show (then Greet to say hello) and leave with Hide.
+// Entrances and exits: Office characters come and go with Greeting / Goodbye
+// (their Show and Hide are a few frames that pop); Agent and XP characters
+// appear with Show (then Greet to say hello) and leave with Hide.
 function fastCharacter(id) {
   const c = JSON.parse(fs.readFileSync(`characters/${id}/character.json`, 'utf8'));
   for (const a of Object.values(c.animations)) for (const f of a.frames) f.duration = Math.ceil(f.duration / 50);
@@ -274,4 +274,43 @@ test('leaving during an entrance does not go on to the hello', async () => {
     await entering;
   });
   assert.deepEqual(names, ['Show', 'Hide']);
+});
+
+// A click plays a random animation: one of the character's attention
+// animations, or its own states' when it has none of those.
+test('click animations come from the character, never the same twice in a row', async () => {
+  const { clickAnimations, pickClick } = await import('../src/character/click.js');
+  for (const id of fs.readdirSync('characters').filter((d) => !d.startsWith('.'))) {
+    const c = JSON.parse(fs.readFileSync(`characters/${id}/character.json`, 'utf8'));
+    const { open, close } = clickAnimations(c);
+    assert.ok(open.length, `${id} has something to play`);
+    for (const n of [...open, ...close]) assert.ok(c.animations[n], `${id}: ${n}`);
+    for (const n of ['Show', 'Hide', 'Greeting', 'Goodbye', 'GoodBye']) assert.ok(!open.includes(n) && !close.includes(n), `${id}: ${n}`);
+  }
+  const { open } = clickAnimations(clippy);
+  assert.ok(open.length > 1);
+  let last;
+  for (let i = 0; i < 50; i++) {
+    const next = pickClick(open, last);
+    assert.notEqual(next, last);
+    last = next;
+  }
+  const clawd = JSON.parse(fs.readFileSync('characters/clawd/character.json', 'utf8'));
+  // Clawd lists its own; Jumping, the end of its Show, is part of the entrance.
+  assert.deepEqual(clickAnimations(clawd), clawd.click);
+  assert.ok(clawd.click.open.length >= 10);
+  const bare = { ...clawd, click: undefined };
+  assert.deepEqual(clickAnimations(bare).open, ['Turning', 'Excited', 'Waving']);
+});
+
+test('a click goes to listening with its own animation', async () => {
+  const rt = new CharacterRuntime(el(), fast, 'x.png');
+  const played = [];
+  rt.addEventListener('animation', (e) => played.push(`${e.detail.name}:${e.detail.kind}`));
+  rt.setState('listening', { animation: 'Wave' });
+  await rt.settle();
+  assert.equal(rt.state, 'listening');
+  assert.equal(await rt.gesture('GestureUp', 'clicked'), 'done');
+  assert.deepEqual(played, ['Wave:listening', 'GestureUp:clicked']);
+  rt.destroy();
 });

@@ -91,6 +91,10 @@
    "source": "app-mapped"
   }
  },
+ "click": {
+  "open": ["Turning", "Excited", "Waving", "Heart", "Rose", "Dancing", "DancingHappy", "Swaying", "Looking", "Walking", "Coffee", "Sunglasses", "Juggling", "Confetti"],
+  "close": ["JumpingHappy", "ConfettiHappy", "Heart"]
+ },
  "idle": {
   "source": "app-mapped",
   "firstDelayMs": 6000,

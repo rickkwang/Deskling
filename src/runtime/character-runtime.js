@@ -102,7 +102,9 @@ export class CharacterRuntime extends EventTarget {
 
   // ---- state machine -----------------------------------------------------
 
-  setState(next) {
+  // `animation` plays instead of one of the state's own (a click's reaction
+  // while going to listening).
+  setState(next, { animation } = {}) {
     if (next === this.state) return true;
     if (!TRANSITIONS[this.state]?.includes(next)) {
       console.warn(`[runtime] ignored transition ${this.state} -> ${next}`);
@@ -114,8 +116,14 @@ export class CharacterRuntime extends EventTarget {
     this._emit('state', { from: prev, to: next });
     if (next === 'hidden') return true;
     this.stop();
-    this._playState(next);
+    this._playState(next, animation);
     return true;
+  }
+
+  // A one-shot animation by name (the reaction to a click), like act().
+  gesture(name, kind = 'gesture') {
+    this.stop();
+    return this.play(name, { kind });
   }
 
   // One-shot official gestures (confused, acknowledge, ...). They interrupt the
@@ -127,11 +135,11 @@ export class CharacterRuntime extends EventTarget {
     return this.play(this._pick(def.animations), { kind: action });
   }
 
-  // Entrances and exits, as ryOS plays them. The Office Animation Set's
-  // Greeting and Goodbye are the full entrance and exit ("when the character
-  // is chosen" / "another character is chosen"), and its Show and Hide are a
-  // few frames that pop. Agent and XP characters appear with Show, say hello
-  // with a separate Greet, and leave with Hide.
+  // Entrances and exits. The Office Animation Set's Greeting and Goodbye are
+  // the full entrance and exit ("when the character is chosen" / "another
+  // character is chosen"), and its Show and Hide are a few frames that pop.
+  // Agent and XP characters appear with Show, say hello with a separate
+  // Greet, and leave with Hide.
   get _office() {
     return this.c.animationSet === 'office';
   }
@@ -166,10 +174,10 @@ export class CharacterRuntime extends EventTarget {
     if (greet && this.c.states.greeting && this.entrance === entrance && !this.destroyed) await this.act('greeting');
   }
 
-  _playState(state) {
+  _playState(state, name) {
     const def = this.c.states[state];
     if (!def) return;
-    this.play(this._pick(def.animations), { kind: state, loop: def.mode === 'loop' });
+    this.play(name ?? this._pick(def.animations), { kind: state, loop: def.mode === 'loop' });
   }
 
   // Called when the queue drains: hold/loop the state's behaviour.

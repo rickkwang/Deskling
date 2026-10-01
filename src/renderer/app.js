@@ -3,6 +3,7 @@ import { validateCharacter } from '../character/validate.js';
 import { speak, cancelSpeech } from './speech.js';
 import { clock } from '../main/focus-timer.js';
 import { Pokes, offlineReason } from '../ai/offline-lines.js';
+import { clickAnimations, pickClick } from '../character/click.js';
 
 const petEl = document.querySelector('#pet');
 const timerEl = document.querySelector('#timer');
@@ -19,6 +20,8 @@ const TIMER_GAP = 8;
 let runtime = null;
 let restShift = 0; // the resting pose's centre, right of its cell's centre (restingShift)
 let character = null;
+let clicks = { open: [], close: [] }; // what a click plays (click.js)
+let lastClick = '';
 let busy = false;
 let settings = {};
 const LONG_PRESS_MS = 550;
@@ -31,6 +34,7 @@ function mountCharacter({ data, sheetUrl }) {
   if (errors.length) throw new Error(`Invalid character "${data.id}": ${errors[0]}`);
   runtime?.destroy();
   character = data;
+  clicks = clickAnimations(data);
   runtime = new CharacterRuntime(petEl, data, sheetUrl);
   restShift = 0;
   restingShift(data, sheetUrl).then((shift) => {
@@ -153,9 +157,18 @@ function greeting() {
   return lastGreeting;
 }
 
-function listen() {
+// A click's animation: a random one of the character's.
+function clickAnimation(list) {
+  if (list.length) lastClick = pickClick(list, lastClick);
+  return list.length ? lastClick : undefined;
+}
+
+// `clicked`: the pet was clicked, and reacts with one of its click animations
+// instead of the listening state's own.
+function listen({ clicked = false } = {}) {
   if (runtime.state === 'thinking' && !busy) runtime.setState('idle'); // working along with Claude Code
-  if (['idle', 'speaking'].includes(runtime.state)) runtime.setState('listening');
+  if (!['idle', 'speaking'].includes(runtime.state)) return;
+  runtime.setState('listening', { animation: clicked ? clickAnimation(clicks.open) : undefined });
 }
 
 window.pet.onBubbleSubmit((text) => ask(text));
@@ -441,28 +454,40 @@ petEl.addEventListener('pointerup', endPress);
 document.addEventListener('pointerup', endPress);
 petEl.addEventListener('lostpointercapture', () => { if (press?.dragging) endPress(); });
 
+// Every click plays a random animation (click.js): one of the attention
+// animations when the balloon opens, a brief nod when it closes.
 function onPetClick() {
   // Can't chat: every click brings a new line (and a run of quick clicks, a
   // reaction); the balloon folds away on its own. A Claude Code notice is
   // closed as usual, which marks it seen.
   if (!busy && offline() && !showingNotice()) return poke();
   if (balloonOpen && !busy && runtime.state !== 'listening') {
-    listen();
+    listen({ clicked: true });
     openBubble({ focus: true });
     return;
   }
-  if (balloonOpen) return closeBubble();
+  if (balloonOpen) {
+    closeBubble();
+    const nod = clickAnimation(clicks.close);
+    if (nod) {
+      runtime.gesture(nod, 'clicked');
+      backToWork();
+    }
+    return;
+  }
   if (!busy) content = { ...content, error: false, dots: false };
-  listen();
+  listen({ clicked: true });
   openBubble({ focus: true });
 }
 
 function poke() {
   const gesture = sayOffline();
   openBubble();
-  if (gesture) {
+  const reaction = gesture ? null : clickAnimation(clicks.open);
+  if (gesture || reaction) {
     runtime.setState('idle');
-    runtime.act(gesture);
+    if (gesture) runtime.act(gesture);
+    else runtime.gesture(reaction, 'clicked');
     backToWork();
   }
   if (settings.ollama !== false) checkAi();
