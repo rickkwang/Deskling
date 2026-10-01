@@ -72,20 +72,35 @@ body.open #bubble {
 }
 #msg:empty { display: none; }
 #msg::-webkit-scrollbar { width: 8px; }
+/* Keep the track out of the balloon's rounded corners: at the top always, at
+   the bottom only when no composer sits under the reply (else it ends at the
+   divider, a little short of it). */
+[data-theme] #msg::-webkit-scrollbar-track { margin: calc(var(--radius) * 0.8px) 0 5px; }
+[data-theme].no-chat #msg::-webkit-scrollbar-track { margin-bottom: calc(var(--radius) * 0.8px); }
 #msg::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
   border-radius: 4px;
   background: var(--hint) padding-box;
 }
-/* The scrollbar shows only while the pointer is over the reply. Its width
-   stays reserved, so the text does not reflow when it appears. */
-[data-theme] #msg:not(:hover)::-webkit-scrollbar-track,
-[data-theme] #msg:not(:hover)::-webkit-scrollbar-thumb {
-  background: transparent;
-  border-color: transparent;
-  box-shadow: none;
+/* The scrollbar shows only while the pointer is over the reply or it is
+   scrolling (.bar, set by bubble.js). Chromium neither repaints scrollbar
+   parts on :hover nor transitions them, so a mask over the scrollbar strip
+   fades it instead. The mask exists only while the reply overflows (.scrolls),
+   else it would clip text in the padding. */
+@property --bar-a {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
 }
-[data-theme] #msg:not(:hover)::-webkit-scrollbar-button { background: transparent; }
+#msg {
+  --bar-a: 0;
+  --bar-mask: linear-gradient(#000, #000);
+  -webkit-mask-image: var(--bar-mask);
+  mask-image: var(--bar-mask);
+  transition: --bar-a 450ms ease;
+}
+#msg.scrolls { --bar-mask: linear-gradient(to right, #000 calc(100% - 16px), rgba(0, 0, 0, var(--bar-a)) 0); }
+#msg.bar { --bar-a: 1; transition-duration: 120ms; }
 #msg.error { color: var(--error); }
 
 /* Waiting for the model: "Thinking…" with a light sweeping across it. */

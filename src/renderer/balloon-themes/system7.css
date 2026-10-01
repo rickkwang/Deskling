@@ -53,15 +53,23 @@
 
 [data-theme="system7"] ::selection { background: #000; color: #fff; }
 
-[data-theme="system7"] #msg { padding: 8px 10px 7px; }
+[data-theme="system7"] #msg {
+  padding: 8px 10px 7px;
+  border-top-right-radius: 4px; /* the rim's curve, inside its 1px: clips the square scroll bar */
+}
+[data-theme="system7"].no-chat #msg { border-bottom-right-radius: 4px; }
 /* Scroll bar: grey (50% dither) track, white box. */
-[data-theme="system7"] #msg::-webkit-scrollbar { width: 16px; }
+[data-theme="system7"] #msg::-webkit-scrollbar { width: 11px; }
 [data-theme="system7"] #msg::-webkit-scrollbar-track {
   background: repeating-conic-gradient(#000 0 25%, #fff 0 50%) 0 0 / 2px 2px;
   border-left: 1px solid #000;
-  margin-top: 6px; /* clear of the rounded corner */
+  /* Runs 1px past each end (#msg's rounded corner clips it to the rim's curve),
+     so the thumb's end edge is the rim or the divider, not a second line one
+     row inside it. */
+  margin: -1px 0;
 }
-[data-theme="system7"] #msg::-webkit-scrollbar-thumb { background: #fff; border: 1px solid #000; }
+[data-theme="system7"].no-chat #msg::-webkit-scrollbar-track { margin-bottom: -1px; }
+[data-theme="system7"] #msg::-webkit-scrollbar-thumb { background: #fff; border: solid #000; border-width: 1px 0 1px 1px; border-radius: 0; }
 
 [data-theme="system7"] #ask { gap: 10px; padding: 8px 12px 10px 10px; }
 

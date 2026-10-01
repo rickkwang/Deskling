@@ -55,9 +55,13 @@ function tailSegments(kind, c, w, r) {
     // Balloon Help (Inside Macintosh: More Macintosh Toolbox, fig. 3-4): a
     // thin spike out of a corner, its tip out past the balloon's side.
     const near = 9, far = 19; // where the spike's two edges meet the balloon
+    // At the right corner the scroll bar runs underneath (System 7's is 11px
+    // wide, bubble.css): the spike's right edge lands on the bar's left line
+    // and carries on up as the spike.
+    const bar = 3;
     return c < w / 2
       ? { start: [near, 0], segs: [{ to: [c, t] }, { to: [far, 0] }] }
-      : { start: [w - far, 0], segs: [{ to: [c, t] }, { to: [w - near, 0] }] };
+      : { start: [w - far - bar, 0], segs: [{ to: [c, t] }, { to: [w - near - bar, 0] }] };
   }
   if (kind === 'office') {
     // Office Assistant balloon: a long, thin wedge leaning out to its tip,
@@ -151,13 +155,31 @@ function setRect(sel, x, y, width, height) {
   for (const [k, v] of Object.entries({ x, y, width, height })) el.setAttribute(k, v);
 }
 
+// Show the scrollbar while the pointer is over the reply or it scrolls.
+let barTimer;
+const showBar = (on) => { clearTimeout(barTimer); msg.classList.toggle('bar', on); };
+msg.addEventListener('mouseenter', () => showBar(true));
+msg.addEventListener('mouseleave', () => showBar(false));
+let autoTop = -1; // where the last content update left the reply scrolled
+msg.addEventListener('scroll', () => {
+  if (msg.scrollTop === autoTop) return; // our own scroll to the end, not the user's
+  msg.classList.add('bar');
+  clearTimeout(barTimer);
+  if (!msg.matches(':hover')) barTimer = setTimeout(() => msg.classList.remove('bar'), 1000);
+});
+
+// The bar's mask (bubble.css) is only for a reply that overflows.
+const syncScrolls = () => msg.classList.toggle('scrolls', msg.scrollHeight > msg.clientHeight);
+
 api.onContent(({ text, error, dots, busy: b, chat = true }) => {
   busy = b;
   document.body.classList.toggle('no-chat', !chat);
   msg.classList.toggle('error', Boolean(error));
   msg.classList.toggle('dots', Boolean(dots));
   msg.textContent = dots ? 'Thinking…' : text;
+  syncScrolls();
   msg.scrollTop = msg.scrollHeight;
+  autoTop = msg.scrollTop;
   sendBtn.disabled = !input.value.trim() || busy;
 });
 
@@ -182,6 +204,7 @@ api.onTheme((theme) => {
   document.body.dataset.theme = theme.id;
   document.body.toggleAttribute('data-glass', Boolean(theme.glass));
   ({ tail, glass = false } = theme);
+  syncScrolls(); // padding and font may differ
   drawShape(); // the size may not change, but radius and tail do
 });
 

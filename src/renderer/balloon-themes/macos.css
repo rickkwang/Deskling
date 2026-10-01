@@ -10,7 +10,7 @@
    (no focus ring while typing), and the button grey (a popover's default
    button is not blue). */
 [data-theme="macos"] {
-  --font: 13px/16px "SF Pro Text", "SF Pro", system-ui, -apple-system, "PingFang SC", sans-serif;
+  --font: 12px/16px "SF Pro Text", "SF Pro", system-ui, -apple-system, "PingFang SC", sans-serif;
   --surface: rgba(251, 251, 251, 0.92);
   --ink: rgba(0, 0, 0, 0.85); /* labelColor */
   --hint: rgba(0, 0, 0, 0.5); /* placeholderTextColor */

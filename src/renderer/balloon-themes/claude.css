@@ -3,8 +3,8 @@
    serif, as Claude's answers are; a white composer field with a clay send
    button carrying the up arrow. Light or dark with the system appearance. */
 [data-theme="claude"] {
-  --font: 13.5px/1.5 "Anthropic Serif", "Tiempos Text", ui-serif, "New York", Georgia, "Songti SC", serif;
-  --ui-font: 13px/1.3 "Anthropic Sans", "Styrene B", system-ui, -apple-system, "PingFang SC", sans-serif;
+  --font: 12px/1.5 "Anthropic Serif", "Tiempos Text", ui-serif, "New York", Georgia, "Songti SC", serif;
+  --ui-font: 12px/1.3 "Anthropic Sans", "Styrene B", system-ui, -apple-system, "PingFang SC", sans-serif;
   --surface: #faf9f5;
   --ink: #141413;
   --hint: #87867f;
@@ -42,8 +42,11 @@
    (within the padding, so unscrolled text is untouched). */
 [data-theme="claude"] #msg {
   padding: 12px 15px 11px;
-  -webkit-mask-image: linear-gradient(transparent, #000 11px, #000 calc(100% - 10px), transparent);
-  mask-image: linear-gradient(transparent, #000 11px, #000 calc(100% - 10px), transparent);
+  --fade: linear-gradient(transparent, #000 11px, #000 calc(100% - 10px), transparent);
+  -webkit-mask-image: var(--fade), var(--bar-mask);
+  mask-image: var(--fade), var(--bar-mask);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
 }
 
 /* Waiting: the sweep is clay, like Claude's spark while it thinks. */
