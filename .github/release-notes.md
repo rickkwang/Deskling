@@ -1,3 +1,5 @@
+**Improved in 0.3.13:** clicking the pet now plays a random one of its animations, a Claude Code notice is no longer a link to your terminal, and a drag that macOS takes over (such as a switch of desktop) now ends when you let go of the mouse button.
+
 **New in 0.3.12:** drag the pet to another desktop like any window: hold it at the side of the screen and it goes to the next desktop with you. Clawd, the pixel crab, is now the default character, and there is a new Claude balloon style in Assistant Settings.
 
 **Improved in 0.3.11:** the balloon now fades out smoothly when you switch to another app, instead of sometimes vanishing at once, and the pet's hello folds away on its own after you've had time to read it.
