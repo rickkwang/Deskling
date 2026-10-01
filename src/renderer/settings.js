@@ -380,7 +380,8 @@ window.pet.claude.onState((next) => {
   renderClaude();
 });
 
-// Size: live while dragging; main resizes the pet around its feet.
+// Size: live while dragging, in steps of 5%; main resizes the pet around its
+// feet, at most once a frame.
 const scaleInput = $('#scale');
 const scaleValue = $('#scale-value');
 const showScale = () => {
@@ -388,9 +389,14 @@ const showScale = () => {
   const { min, max, value } = scaleInput;
   scaleInput.style.setProperty('--fill', `${((value - min) / (max - min)) * 100}%`);
 };
+let scaleFrame = 0;
 scaleInput.addEventListener('input', () => {
   showScale();
-  window.pet.setSettings({ scale: Number(scaleInput.value) });
+  if (scaleFrame) return;
+  scaleFrame = requestAnimationFrame(() => {
+    scaleFrame = 0;
+    window.pet.setSettings({ scale: Number(scaleInput.value) });
+  });
 });
 
 const instructions = $('#instructions');

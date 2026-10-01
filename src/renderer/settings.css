@@ -292,6 +292,7 @@ body {
 .button.danger:hover { background: var(--clay-wash); border-color: var(--clay); }
 
 .make-own { margin: -4px 4px 14px; }
+.help.make-own { margin: 8px 4px 18px; } /* .help below would win the margin */
 .link {
   font: inherit;
   color: var(--clay-deep);
@@ -339,17 +340,24 @@ input[type="range"] {
 input[type="range"]::-webkit-slider-runnable-track {
   height: 4px;
   border-radius: 2px;
+  cursor: pointer;
   background: linear-gradient(to right, var(--clay) var(--fill), #e3e1d9 var(--fill));
 }
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 14px;
-  height: 14px;
-  margin-top: -5px;
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
   border-radius: 50%;
   background: #fff;
   border: 0.5px solid var(--line-strong);
   box-shadow: 0 1px 3px rgba(20, 20, 19, 0.2);
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+input[type="range"]:hover::-webkit-slider-thumb { box-shadow: 0 1px 4px rgba(20, 20, 19, 0.28); }
+input[type="range"]:active::-webkit-slider-thumb {
+  transform: scale(1.1);
+  box-shadow: 0 0 0 5px rgba(198, 97, 63, 0.16), 0 1px 4px rgba(20, 20, 19, 0.28);
 }
 input[type="range"]:focus-visible { outline: none; }
 input[type="range"]:focus-visible::-webkit-slider-thumb { outline: 2px solid var(--clay); outline-offset: 2px; }

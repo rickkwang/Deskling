@@ -43,12 +43,9 @@
       <div class="card size-row">
         <label for="scale">Size</label>
         <span class="size-end" aria-hidden="true">Small</span>
-        <input type="range" id="scale" min="0.5" max="2" step="0.25" list="scale-ticks">
+        <input type="range" id="scale" min="0.5" max="1.25" step="0.05">
         <span class="size-end" aria-hidden="true">Large</span>
         <output id="scale-value" for="scale">100%</output>
-        <datalist id="scale-ticks">
-          <option value="0.5"></option><option value="1"></option><option value="1.5"></option><option value="2"></option>
-        </datalist>
       </div>
       <h2 class="heading">Balloon</h2>
       <div class="balloons" id="balloons" role="radiogroup" aria-label="Balloon style"></div>

@@ -46,6 +46,7 @@ const assistant = new Assistant();
 // ---- settings -------------------------------------------------------------
 
 const settingsFile = () => path.join(app.getPath('userData'), 'settings.json');
+const MAX_SCALE = 1.25; // larger looks coarse (Settings > Size)
 let settings = {
   character: 'clawd', model: null,
   // Screen point where the pet's feet stand (the window is laid out around it).
@@ -90,6 +91,7 @@ function migrateUserData() {
 
 function loadSettings() {
   try { settings = { ...settings, ...JSON.parse(fs.readFileSync(settingsFile(), 'utf8')) }; } catch { /* first run */ }
+  settings.scale = Math.min(MAX_SCALE, settings.scale); // saved under an older, larger limit
   // Migrate the old fixed-layout window position (340x600, feet at 266,360).
   if (settings.petX == null && settings.x != null) {
     settings.petX = settings.x + 266;
@@ -671,7 +673,7 @@ function switchCharacter(id) {
 
 // Applies a partial settings change from any UI, persists and broadcasts it.
 function updateSettings(patch) {
-  if (patch.scale !== undefined) patch.scale = Math.min(2, Math.max(0.5, Number(patch.scale) || 1));
+  if (patch.scale !== undefined) patch.scale = Math.min(MAX_SCALE, Math.max(0.5, Number(patch.scale) || 1));
   if (patch.balloon !== undefined && !(patch.balloon in BALLOON_THEMES)) delete patch.balloon;
   if (patch.focusSeconds !== undefined && !validSeconds('focus', patch.focusSeconds)) delete patch.focusSeconds;
   if (patch.breakSeconds !== undefined && !validSeconds('break', patch.breakSeconds)) delete patch.breakSeconds;
