@@ -2,3 +2,4 @@ node_modules/
 qa/
 .DS_Store
 release/
+CLAUDE.md

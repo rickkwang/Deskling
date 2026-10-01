@@ -23,7 +23,7 @@ when a new version is out, and **Update to …** in its right-click menu install
 npm install
 npm start                      # the pet (tray 📎: show/hide/quit; right-click the pet for the menu)
 npm run selftest               # end-to-end: idle → click → listening → thinking → speaking → idle
-npm test                       # runtime semantics (exit branches, queue, idle levels)
+npm test                       # unit tests: runtime semantics, assistant, focus timer, Claude Code, updater, sheet import
 npm run validate               # validate every characters/*/character.json
 npm run eval:prompts           # try the chat prompt on the local Ollama model (limits, refusals)
 npm run dist                   # release/: Deskling-<version>-arm64.dmg + .zip + latest-mac.yml (ad-hoc signed)
