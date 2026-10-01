@@ -837,7 +837,7 @@ function timerMenu() {
 // ---- Claude Code ------------------------------------------------------------
 // Like Codex's pets: while a Claude Code session works, the pet works (its
 // thinking animation), and it shows what needs the user: a session waiting
-// for an answer, failed, or done; clicking it brings the terminal forward.
+// for an answer, failed, or done.
 // Turning it on puts hooks into Claude Code's settings.json that post each
 // event here (claude-code.js).
 
@@ -875,7 +875,7 @@ const noticeLine = (n) => lines(n)[n.kind === 'asking' ? n.why : n.kind](n.proje
 function claudeStatus() {
   const { working, notice: n, more } = claude.sessions.status();
   if (!n) return { working, notice: null, more };
-  return { working, notice: { id: n.id, kind: n.kind, line: noticeLine(n), extra: more ? lines(n).more(more) : '', terminal: Boolean(n.terminal) }, more };
+  return { working, notice: { id: n.id, kind: n.kind, line: noticeLine(n), extra: more ? lines(n).more(more) : '' }, more };
 }
 
 // Each new done or failed notice goes into the conversation, with more of
@@ -892,13 +892,6 @@ function tellAssistant() {
 
 function sendClaudeStatus() {
   win?.webContents.send('claude:status', claudeStatus());
-}
-
-// A click on the notice: to the terminal Claude Code runs in, and it's seen.
-function openClaudeNotice() {
-  const terminal = claude.sessions.status().notice?.terminal;
-  if (terminal) execFile('/usr/bin/open', ['-b', terminal], (e) => e && console.warn(`[claude-code] ${e.message}`));
-  claude.sessions.dismiss();
 }
 
 async function startClaudeServer() {
@@ -1154,7 +1147,7 @@ function registerIpc() {
       placeBalloon();
     }
   });
-  for (const ch of ['bubble:submit', 'bubble:typing', 'bubble:escape', 'bubble:click']) {
+  for (const ch of ['bubble:submit', 'bubble:typing', 'bubble:escape']) {
     ipcMain.on(ch, (_e, payload) => win?.webContents.send(ch, payload));
   }
 
@@ -1201,7 +1194,6 @@ function registerIpc() {
   ipcMain.handle('timer:status', () => timer.status());
   ipcMain.handle('claude:status', () => claudeStatus());
   ipcMain.on('claude:dismiss', () => claude.sessions.dismiss());
-  ipcMain.on('claude:open', openClaudeNotice);
   ipcMain.on('claude:reconnect', () => connectClaudeCode(true));
 
   ipcMain.handle('audit:characters', () => listCharacters().map((c) => loadCharacter(c.id)));

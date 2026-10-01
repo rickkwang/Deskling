@@ -15,9 +15,7 @@ const ENDPOINT = `http://127.0.0.1:${PORT}/claude-code`;
 // which the server never answers, so web pages can't post events.
 const HEADER = 'x-deskling';
 const MAX_BODY = 4 * 1024 * 1024; // PostToolUse carries the tool's output
-// The terminal app Claude Code runs in (macOS sets its bundle id), so a click
-// on the pet's notice can bring it forward.
-export const HOOK_COMMAND = `curl -sf -m 2 -H 'Content-Type: application/json' -H '${HEADER}: 1' -H "x-terminal: $__CFBundleIdentifier" --data-binary @- ${ENDPOINT} >/dev/null 2>&1 || true`;
+export const HOOK_COMMAND = `curl -sf -m 2 -H 'Content-Type: application/json' -H '${HEADER}: 1' --data-binary @- ${ENDPOINT} >/dev/null 2>&1 || true`;
 export const HOOK_EVENTS = ['UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'PermissionRequest', 'Notification', 'Stop', 'StopFailure', 'SessionEnd'];
 // Tools that wait for the user rather than work. Other tools' PreToolUse adds
 // nothing (the turn is already working), so the hook only runs for these.
@@ -120,14 +118,14 @@ const RANK = { asking: 3, failed: 2, done: 1 };
 export class ClaudeSessions {
   // onChange({ working, notice, more }) whenever the picture changes: whether
   // any session works, the notice that matters most ({ id, kind: 'asking' |
-  // 'failed' | 'done', project, lang: 'en' | 'zh', text?, detail?, why?,
-  // terminal? }, or null; `detail` is more of Claude's reply) and how
+  // 'failed' | 'done', project, lang: 'en' | 'zh', text?, detail?, why? },
+  // or null; `detail` is more of Claude's reply) and how
   // many others wait behind it. Notices go away once seen: the session works
   // again, the user prompts it again, or dismiss().
   constructor({ onChange = () => {}, now = Date.now } = {}) {
     this.onChange = onChange;
     this.now = now;
-    // id -> { state: 'working' | 'asking' | 'idle' | 'stale', project, terminal, lang, since (turn start), at (last event), notice }
+    // id -> { state: 'working' | 'asking' | 'idle' | 'stale', project, lang, since (turn start), at (last event), notice }
     this.sessions = new Map();
     this.ids = 0;
     this.last = JSON.stringify(this.status());
@@ -151,10 +149,10 @@ export class ClaudeSessions {
     // A turn it saw start: none for sessions begun before Deskling listened.
     const inTurn = prev && prev.state !== 'idle';
     const project = path.basename(event.cwd || '') || 'Claude Code';
-    const s = { since: this.now(), notice: null, ...prev, project, terminal: event.terminal || prev?.terminal, at: this.now() };
+    const s = { since: this.now(), notice: null, ...prev, project, at: this.now() };
     this.sessions.set(id, s);
     if (name === 'UserPromptSubmit' && event.prompt) s.lang = chinese(event.prompt) ? 'zh' : 'en';
-    const notify = (kind, more) => { s.notice = { id: ++this.ids, kind, project, lang: s.lang || 'en', terminal: s.terminal, ...more }; };
+    const notify = (kind, more) => { s.notice = { id: ++this.ids, kind, project, lang: s.lang || 'en', ...more }; };
     const ask = (why) => { if (s.state !== 'asking') notify('asking', { why }); s.state = 'asking'; };
     if (name === 'UserPromptSubmit') Object.assign(s, { state: 'working', since: this.now(), notice: null }); // back at it: seen
     else if (name === 'PostToolUse' || (name === 'PreToolUse' && !ASKING_TOOLS.includes(event.tool_name))) {
@@ -179,7 +177,7 @@ export class ClaudeSessions {
     this.changed();
   }
 
-  // The user saw them (closed the balloon, or went to the terminal).
+  // The user saw them (closed the balloon).
   dismiss() {
     for (const s of this.sessions.values()) s.notice = null;
     this.changed();
@@ -218,10 +216,9 @@ export function listen(onEvent, port = PORT) {
     req.on('end', () => {
       res.writeHead(204).end();
       if (size > MAX_BODY) return;
-      const terminal = /^[\w.-]{1,200}$/.test(req.headers['x-terminal'] || '') ? req.headers['x-terminal'] : undefined;
       let event;
       try { event = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { return; } // not JSON
-      try { onEvent({ ...event, terminal }); } catch (e) { console.warn(`[claude-code] ${e.stack}`); }
+      try { onEvent(event); } catch (e) { console.warn(`[claude-code] ${e.stack}`); }
     });
   });
   return new Promise((resolve, reject) => {

@@ -17,14 +17,14 @@ function setup() {
 
 test('a turn works, then shows it is done until the user comes back to it', () => {
   const { sessions, changes, send, notice, advance } = setup();
-  send('UserPromptSubmit', { terminal: 'com.mitchellh.ghostty' });
+  send('UserPromptSubmit');
   send('PreToolUse', { tool_name: 'Bash' });
   advance(DONE_AFTER_MS);
   send('PostToolUse', { tool_name: 'Bash' });
   assert.deepEqual(changes, [{ working: true, notice: null, more: 0 }], 'one change for the whole turn');
   send('Stop', { last_assistant_message: '**Added** the `hooks` and [tests](x.md).\n\nMore detail.' });
   assert.equal(sessions.status().working, false);
-  assert.deepEqual(notice(), { id: 1, kind: 'done', project: 'deskling', lang: 'en', terminal: 'com.mitchellh.ghostty', text: 'Added the hooks and tests.', detail: '**Added** the `hooks` and [tests](x.md).\n\nMore detail.' });
+  assert.deepEqual(notice(), { id: 1, kind: 'done', project: 'deskling', lang: 'en', text: 'Added the hooks and tests.', detail: '**Added** the `hooks` and [tests](x.md).\n\nMore detail.' });
   send('UserPromptSubmit');
   assert.equal(notice(), null, 'prompting the session again means it was seen');
 });
@@ -216,10 +216,9 @@ test('the server takes hook posts, and nothing without the header', async () => 
   const port = 47900 + Math.floor(Math.random() * 90);
   const server = await listen((e) => events.push(e), port);
   const post = (headers) => fetch(`http://127.0.0.1:${port}/claude-code`, { method: 'POST', headers, body: '{"session_id":"s"}' });
-  assert.equal((await post({ 'x-deskling': '1', 'x-terminal': 'com.mitchellh.ghostty' })).status, 204);
-  assert.equal((await post({ 'x-deskling': '1', 'x-terminal': '-a Calculator' })).status, 204);
+  assert.equal((await post({ 'x-deskling': '1' })).status, 204);
   assert.equal((await post({})).status, 404);
-  assert.deepEqual(events, [{ session_id: 's', terminal: 'com.mitchellh.ghostty' }, { session_id: 's', terminal: undefined }], 'only a bundle id passes');
+  assert.deepEqual(events, [{ session_id: 's' }]);
   await assert.rejects(listen(() => {}, port), /EADDRINUSE/);
   server.close();
 });

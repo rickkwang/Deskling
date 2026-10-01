@@ -14,7 +14,6 @@
   --field-edge: rgba(31, 30, 29, 0.15);
   --clay: #d97757;
   --clay-deep: #c6613f;
-  --link-hover: var(--clay-deep);
   --error: #b53333;
   --radius: 14;
   --tail-shape: popover;
@@ -31,7 +30,6 @@
     --field: #262624;
     --field-edge: rgba(222, 220, 209, 0.16);
     --error: #e87b7b;
-    --link-hover: #e8957a; /* lighter than clay: readable on the dark surface */
   }
 }
 [data-theme="claude"] #shape .fill { fill: var(--surface); }
@@ -47,13 +45,6 @@
   -webkit-mask-image: linear-gradient(transparent, #000 11px, #000 calc(100% - 10px), transparent);
   mask-image: linear-gradient(transparent, #000 11px, #000 calc(100% - 10px), transparent);
 }
-[data-theme="claude"] #msg.link {
-  text-decoration: underline 1px;
-  -webkit-text-decoration-color: var(--clay);
-  text-decoration-color: var(--clay);
-  text-underline-offset: 3px;
-}
-[data-theme="claude"] #msg.link:hover { color: var(--link-hover); }
 
 /* Waiting: the sweep is clay, like Claude's spark while it thinks. */
 [data-theme="claude"] .dots {

@@ -138,8 +138,8 @@ function closeBubble() {
   if (runtime.state !== 'hidden') runtime.setState('idle');
 }
 
-function say(text, { error = false, link = false } = {}) {
-  content = { text, error, dots: false, link };
+function say(text, { error = false } = {}) {
+  content = { text, error, dots: false };
   renderBalloon();
   foldLine();
 }
@@ -330,7 +330,7 @@ window.pet.timer.onSound((file) => new Audio(`sounds/${file}`).play().catch(() =
 // Main follows Claude Code sessions through its hooks. While one works, the
 // pet works too (its thinking animation, whenever it isn't busy with the
 // user). The balloon shows the notice that matters most (waiting for an
-// answer, failed, done) until it's seen; clicking it goes to the terminal.
+// answer, failed, done) until it's seen.
 
 let claude = { working: false, notice: null, more: 0 };
 let noticeId = 0; // the newest notice announced
@@ -370,7 +370,7 @@ function showNotice() {
   const before = fresh
     ? (balloonOpen && unread && content.text === unread ? `${unread}\n\n` : '')
     : content.text.slice(0, -noticeText.length);
-  const look = { error: notice.kind === 'failed' && !before, link: notice.terminal };
+  const look = { error: notice.kind === 'failed' && !before };
   noticeText = text;
   if (!fresh) return say(before + text, look);
   noticeId = notice.id;
@@ -385,7 +385,6 @@ window.pet.claude.onStatus((status) => {
   else if (runtime.state === 'thinking' && !busy) runtime.setState('idle');
   showNotice();
 });
-window.pet.onBubbleClick(() => { if (showingNotice()) window.pet.claude.open(); });
 
 // ---- input: click vs drag, click-through ---------------------------------
 
@@ -565,9 +564,9 @@ window.pet.onRenamed(({ displayName, persona }) => {
 let pendingUpdate = null;
 let entering = false; // the pet's entrance is playing: wait for it
 
-function announce(text, { error = false, link = false, gesture = error ? 'confused' : 'getAttention' } = {}) {
+function announce(text, { error = false, gesture = error ? 'confused' : 'getAttention' } = {}) {
   if (busy) return false;
-  say(text, { error, link });
+  say(text, { error });
   runtime.setState('idle');
   runtime.act(gesture);
   openBubble();

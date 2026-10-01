@@ -34,7 +34,6 @@ contextBridge.exposeInMainWorld('pet', {
     status: () => ipcRenderer.invoke('claude:status'),
     onStatus: on('claude:status'),
     dismiss: () => ipcRenderer.send('claude:dismiss'),
-    open: () => ipcRenderer.send('claude:open'),
     reconnect: () => ipcRenderer.send('claude:reconnect'),
     onState: on('settings:claude-code'),
   },
@@ -45,7 +44,6 @@ contextBridge.exposeInMainWorld('pet', {
   onBubbleSubmit: on('bubble:submit'),
   onBubbleTyping: on('bubble:typing'),
   onBubbleEscape: on('bubble:escape'),
-  onBubbleClick: on('bubble:click'),
   onAway: on('pet:away'),
   // Used inside the balloon window.
   balloon: {
@@ -58,7 +56,6 @@ contextBridge.exposeInMainWorld('pet', {
     submit: (text) => ipcRenderer.send('bubble:submit', text),
     typing: () => ipcRenderer.send('bubble:typing'),
     escape: () => ipcRenderer.send('bubble:escape'),
-    click: () => ipcRenderer.send('bubble:click'),
   },
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (patch) => ipcRenderer.send('settings:set', patch),
