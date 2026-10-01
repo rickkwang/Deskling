@@ -1,10 +1,14 @@
-/* macOS: NSPopover as drawn by macOS 26/27, measured from a real one: a
-   17-pt corner radius, a 29 × 12 arrow with a rounded tip that flares into
-   the edge, a half-point edge (dark mode adds a light line inside it), and a
-   soft shadow. Light or dark with the system appearance. Controls match a
-   real popover's: 13-pt SF text, a hairline above the field, a 24-pt field
-   and push button with 8-pt corners (no focus ring while typing), and the
-   button grey (a popover's default button is not blue). */
+/* macOS: a popover as macOS 26/27 draws one, in the real material. Main gives
+   the balloon's window the system's popover material, which blurs and tints
+   with what is behind it, cut to the balloon's outline (bubble.js sends it),
+   and the system draws the edge and the shadow: body[data-glass]. Without it
+   the same outline is drawn here in a solid surface. The outline is
+   NSPopover's, measured from a real one: a 17-pt corner radius and a 29 × 12
+   arrow with a rounded tip that flares into the edge. Light or dark with the
+   system appearance. Controls match a real popover's: 13-pt SF text, a
+   hairline above the field, a 24-pt field and push button with 8-pt corners
+   (no focus ring while typing), and the button grey (a popover's default
+   button is not blue). */
 [data-theme="macos"] {
   --font: 13px/16px "SF Pro Text", "SF Pro", system-ui, -apple-system, "PingFang SC", sans-serif;
   --surface: rgba(251, 251, 251, 0.92);
@@ -19,7 +23,8 @@
   --error: #ff383c; /* systemRed */
   --radius: 17;
   --tail-shape: popover;
-  --shadow-blur: 4;
+  --shadow-blur: 6;
+  --shadow: rgba(0, 0, 0, 0.2);
   -webkit-font-smoothing: antialiased;
 }
 @media (prefers-color-scheme: dark) {
@@ -27,23 +32,31 @@
     --surface: rgba(33, 33, 33, 0.92);
     --ink: rgba(255, 255, 255, 0.85);
     --hint: rgba(255, 255, 255, 0.55);
-    --rule: rgba(255, 255, 255, 0.1);
+    --rule: rgba(255, 255, 255, 0.16);
     --edge: rgba(0, 0, 0, 0.85);
     --field: #1e1e1e;
     --field-edge: rgba(255, 255, 255, 0.12);
-      --button: rgba(255, 255, 255, 0.12);
+    --button: rgba(255, 255, 255, 0.12);
     --error: #ff4245;
+    --shadow: rgba(0, 0, 0, 0.26);
   }
 }
 [data-theme="macos"] #shape .fill { fill: var(--surface); }
 [data-theme="macos"] #shape .rim { stroke: var(--edge); stroke-width: 0.5; }
-[data-theme="macos"] #shape .shadow-soft { fill: rgba(0, 0, 0, 0.2); transform: translate(0, 2px); }
+[data-theme="macos"] #shape .shadow-soft { fill: var(--shadow); transform: translate(0, 3px); }
 /* Dark mode's light inner line (a clipped double-width stroke, like Aqua's). */
 [data-theme="macos"] #shape .glass { display: inline; }
-[data-theme="macos"] #shape .glow, [data-theme="macos"] #shape .sheen, [data-theme="macos"] #shape .inner-rim { display: none; }
-[data-theme="macos"] #shape .inner-rim { fill: none; stroke: rgba(255, 255, 255, 0.28); stroke-width: 2; }
+[data-theme="macos"] #shape .inner-rim { display: none; fill: none; stroke: rgba(255, 255, 255, 0.1); stroke-width: 2; }
 @media (prefers-color-scheme: dark) {
   [data-theme="macos"] #shape .inner-rim { display: inline; }
+}
+
+/* In the real material the window is the surface: nothing is drawn behind
+   the text, and the field lets a little of the glass through. */
+[data-theme="macos"][data-glass] #shape { visibility: hidden; }
+[data-theme="macos"][data-glass] { --field: rgba(255, 255, 255, 0.88); }
+@media (prefers-color-scheme: dark) {
+  [data-theme="macos"][data-glass] { --field: rgba(22, 22, 22, 0.86); }
 }
 
 [data-theme="macos"] #msg { padding: 12px 15px 10px; }

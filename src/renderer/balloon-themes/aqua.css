@@ -1,37 +1,80 @@
-/* Aqua glass: a translucent aqua-tinted pane with a gel highlight floating
-   inside the rim, a caustic glow pooling at the bottom and a blue rim lit
-   from inside. The controls follow the Aqua Human Interface Guidelines
-   (Apple, June 2002): 13-point Lucida Grande, a square text field with a
-   3-pixel inner shadow (no focus ring while typing), and a 20-pixel capsule push
-   button that is clear, or blue and pulsing when it is the default. */
+/* Aqua, liquid: the balloon is a drop of blue gel. Light falls on its top and
+   melts into it, more pools along the bottom, a crisp dark hairline
+   holds it and the shadow sits close underneath. The field is a pale well in
+   the gel; the button is Aqua's gel capsule (Aqua Human Interface Guidelines,
+   Apple, June 2002): clear, or blue and pulsing when it is the default. The
+   gel is opaque: nothing behind the balloon can be blurred, so whatever
+   showed through would tangle with the words.
+   13-point Lucida Grande. Light or dark with the system appearance. */
 [data-theme="aqua"] {
-  --font: 13px/1.38 "Lucida Grande", "PingFang SC", -apple-system, sans-serif;
-  --ink: #000;
-  --rule: rgba(40, 90, 160, 0.22);
-  --hint: #8e8e8e;
+  /* Chinese in Hiragino Sans GB, the face Mac OS X paired with Lucida Grande. */
+  --font: 13px/1.38 "Lucida Grande", "Hiragino Sans GB", "PingFang SC", "Heiti SC", -apple-system, sans-serif;
+  --ink: #06101f;
+  --rule: rgba(20, 60, 130, 0.2);
+  --hint: rgba(15, 35, 70, 0.52);
   --error: #a31b1b;
-  --radius: 10;
-  --tail-shape: straight;
-  --shadow-blur: 2.5;
+  --gel-top: #cde3ff;
+  --gel-mid: #bedafe;
+  --gel-bottom: #accffc;
+  --edge: rgba(8, 30, 78, 0.55);
+  --shine: #fff;
+  --well: rgba(255, 255, 255, 0.72);
+  --well-edge: rgba(20, 50, 105, 0.34);
+  --well-lip: rgba(255, 255, 255, 0.55);
+  --radius: 16;
+  --tail-shape: popover;
+  --shadow-blur: 2.2;
+  -webkit-font-smoothing: antialiased;
+}
+@media (prefers-color-scheme: dark) {
+  [data-theme="aqua"] {
+    --ink: #f2f6fc;
+    --rule: rgba(170, 205, 255, 0.16);
+    --hint: rgba(210, 226, 250, 0.52);
+    --error: #ff8a84;
+    --gel-top: #34486c;
+    --gel-mid: #26385a;
+    --gel-bottom: #1e3054;
+    --edge: rgba(0, 0, 0, 0.8);
+    --shine: #d6e6ff;
+    --well: rgba(255, 255, 255, 0.09);
+    --well-edge: rgba(180, 210, 255, 0.24);
+    --well-lip: rgba(255, 255, 255, 0.06);
+  }
 }
 [data-theme="aqua"] #shape .fill { fill: url(#glass-fill); }
-[data-theme="aqua"] #shape .fill-top { stop-color: rgba(236, 246, 255, 0.88); }
-[data-theme="aqua"] #shape .fill-mid { stop-color: rgba(228, 243, 255, 0.84); }
-[data-theme="aqua"] #shape .fill-bottom { stop-color: rgba(196, 226, 252, 0.9); }
+[data-theme="aqua"] #shape .fill-top { stop-color: var(--gel-top); }
+[data-theme="aqua"] #shape .fill-mid { stop-color: var(--gel-mid); }
+[data-theme="aqua"] #shape .fill-bottom { stop-color: var(--gel-bottom); }
 [data-theme="aqua"] #shape .glass { display: inline; }
-[data-theme="aqua"] #shape .glow { fill: url(#glass-glow); }
-[data-theme="aqua"] #shape .glow-in { stop-color: rgba(120, 220, 255, 0.75); }
-[data-theme="aqua"] #shape .glow-out { stop-color: rgba(140, 225, 255, 0); }
 [data-theme="aqua"] #shape .sheen { fill: url(#glass-sheen); }
-[data-theme="aqua"] #shape .sheen-top { stop-color: rgba(255, 255, 255, 0.95); }
-[data-theme="aqua"] #shape .sheen-bottom { stop-color: rgba(255, 255, 255, 0.25); }
-/* Stroked twice as wide and clipped to the shape: only the inner half shows. */
-[data-theme="aqua"] #shape .inner-rim { fill: none; stroke: rgba(255, 255, 255, 0.85); stroke-width: 2; }
-[data-theme="aqua"] #shape .rim { stroke: rgba(35, 85, 160, 0.62); }
-/* Only outside the glass (masked), or it would muddy the tint. */
-[data-theme="aqua"] #shape .shadow-soft { fill: rgba(0, 35, 90, 0.34); transform: translate(0, 2.5px); }
+[data-theme="aqua"] #shape .sheen-top { stop-color: var(--shine); stop-opacity: 0.82; }
+[data-theme="aqua"] #shape .sheen-mid { stop-color: var(--shine); stop-opacity: 0.36; }
+[data-theme="aqua"] #shape .sheen-bottom { stop-color: var(--shine); stop-opacity: 0; }
+[data-theme="aqua"] #shape .glow { fill: url(#glass-glow); }
+[data-theme="aqua"] #shape .glow-top { stop-color: var(--shine); stop-opacity: 0; }
+[data-theme="aqua"] #shape .glow-bottom { stop-color: var(--shine); stop-opacity: 0.42; }
+/* A thin light inside the edge. Stroked twice as wide and clipped to the
+   shape: only the inner half shows. */
+[data-theme="aqua"] #shape .inner-rim { fill: none; stroke: url(#glass-edge); stroke-width: 2; }
+[data-theme="aqua"] #shape .edge-top { stop-color: var(--shine); stop-opacity: 0.7; }
+[data-theme="aqua"] #shape .edge-mid { stop-color: var(--shine); stop-opacity: 0.18; }
+[data-theme="aqua"] #shape .edge-bottom { stop-color: var(--shine); stop-opacity: 0.35; }
+[data-theme="aqua"] #shape .rim { stroke: var(--edge); stroke-width: 0.75; }
+[data-theme="aqua"] #shape .shadow-soft { fill: rgba(0, 20, 60, 0.42); transform: translate(0, 2px); }
+@media (prefers-color-scheme: dark) {
+  [data-theme="aqua"] #shape .sheen-top { stop-opacity: 0.34; }
+  [data-theme="aqua"] #shape .sheen-mid { stop-opacity: 0.13; }
+  [data-theme="aqua"] #shape .glow-bottom { stop-opacity: 0.14; }
+  [data-theme="aqua"] #shape .edge-top { stop-opacity: 0.4; }
+  [data-theme="aqua"] #shape .edge-mid { stop-opacity: 0.08; }
+  [data-theme="aqua"] #shape .edge-bottom { stop-opacity: 0.16; }
+  [data-theme="aqua"] #shape .shadow-soft { fill: rgba(0, 0, 0, 0.55); }
+}
 
-[data-theme="aqua"] ::selection { background: #b5d5ff; } /* Aqua highlight */
+[data-theme="aqua"] #msg { padding: 12px 15px 10px; text-shadow: 0 1px 1px rgba(0, 20, 60, 0.08); } /* the text sits in the gel */
+
+[data-theme="aqua"] ::selection { background: rgba(70, 140, 245, 0.38); }
 
 /* Aqua scroller: a blue gel pill. */
 [data-theme="aqua"] #msg::-webkit-scrollbar { width: 9px; }
@@ -43,32 +86,32 @@
 }
 
 [data-theme="aqua"] #ask {
-  gap: 10px;
-  padding: 8px 10px 10px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8); /* etched groove */
+  gap: 8px;
+  padding: 9px 10px 10px;
+  box-shadow: inset 0 1px 0 var(--well-lip); /* light under the hairline */
 }
 
-/* Text input field (HIG fig. 7-30): 22 high, grey frame darkest on top,
-   and a 3-pixel shadow inside. Colours sampled from the figure. */
+/* A pale well in the gel: sunk a little at the top, a lip of light below. */
 [data-theme="aqua"] #input {
   height: 22px;
-  border: 1px solid #b9b9b9;
-  border-top-color: #7c7c7c;
-  border-bottom-color: #cfcfcf;
-  background: #fff;
-  box-shadow: inset 0 1px #c3c3c3, inset 0 2px #f0f0f0, inset 1px 0 #e3e3e3, inset -1px 0 #e3e3e3;
-  padding: 0 4px;
+  border: 1px solid var(--well-edge);
+  border-radius: 11px;
+  background: var(--well);
+  box-shadow: inset 0 1px 2px rgba(0, 20, 60, 0.16), 0 1px 0 var(--well-lip);
+  padding: 0 9px;
 }
-/* Push button (HIG fig. 7-3): 20 high plus shadow, 14-pixel end caps. */
+
+/* Push button (HIG fig. 7-3): a capsule with 14-pixel end caps, as tall as
+   the field. */
 [data-theme="aqua"] #send {
   position: relative;
   overflow: hidden;
   width: auto;
-  height: 20px;
+  height: 22px;
   padding: 0 14px;
   border: 1px solid #7c7d80;
   border-bottom-color: #8d8f92;
-  border-radius: 10px;
+  border-radius: 11px;
   font: inherit;
   color: #000;
   /* Clear: grey gloss on top, white glow at the bottom (sampled, fig. 7-1). */
@@ -76,16 +119,26 @@
   box-shadow: 0 1px 1.5px rgba(0, 0, 0, 0.25);
 }
 [data-theme="aqua"] .send-icon { display: none; }
-[data-theme="aqua"] .send-label { display: block; position: relative; } /* above the pulse */
+[data-theme="aqua"] .send-label { display: block; position: relative; z-index: 1; } /* above the pulse and the gloss */
 [data-theme="aqua"] #send:disabled { color: rgba(0, 0, 0, 0.35); }
+@media (prefers-color-scheme: dark) {
+  [data-theme="aqua"] #send:disabled { opacity: 0.7; }
+}
 
 /* Default: blue, and pulsing (HIG: "uses color and pulses"). The pulse
    fades a paler blue in and out over the saturated one. */
 [data-theme="aqua"] #send:not(:disabled) {
   border-color: #2c5b99;
-  background:
-    linear-gradient(rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.2)) 7px 2px / calc(100% - 14px) 7px no-repeat,
-    linear-gradient(#5e9ae6, #8ebbf0 25%, #6da6ec 45%, #3c87e0 55%, #65acf0 78%, #a6dcfb);
+  background: linear-gradient(#5e9ae6, #8ebbf0 25%, #6da6ec 45%, #3c87e0 55%, #65acf0 78%, #a6dcfb);
+}
+/* The gel's gloss: a capsule of light in the top half, following the ends. */
+[data-theme="aqua"] #send:not(:disabled)::after {
+  content: "";
+  position: absolute;
+  inset: 1px 5px auto;
+  height: 8px;
+  border-radius: 6px 6px 4px 4px / 5px 5px 3px 3px;
+  background: linear-gradient(rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.12));
 }
 [data-theme="aqua"] #send:not(:disabled)::before {
   content: "";

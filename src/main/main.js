@@ -6,6 +6,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Assistant, RESPONSE_STYLES } from '../ai/assistant.js';
 import { DragFollower } from './drag-follow.js';
 import { leftButtonDown, startNativeDrag } from './native-drag.js';
+import { setMaterialMask } from './glass-mask.js';
 import { FocusTimer, LIMITS, validSeconds, PRESETS, SOUNDS, duration, minutesLeft } from './focus-timer.js';
 import { checkForUpdate, prepareInstall, releasePage } from './updater.js';
 import { ClaudeSessions, claudeSettingsFile, hooksInstalled, listen, readClaudeSettings, setHooks } from './claude-code.js';
@@ -60,11 +61,13 @@ let settings = {
 // Speech balloon looks: src/renderer/balloon-themes/<id>.css. `tail` is how
 // far the tail tip reaches beyond the box (it sets where the window goes);
 // `corner` tails grow out of a corner, like System 7 Balloon Help, so the
-// balloon is placed with that corner at the pet.
+// balloon is placed with that corner at the pet. A `glass` balloon is made of
+// the system's popover material (which blurs what is behind it), cut to the
+// balloon's outline.
 const BALLOON_THEMES = {
-  classic: { label: 'Classic', tail: 14 }, // the Office Assistant's long wedge
-  aqua: { label: 'Aqua', tail: 7 },
-  macos: { label: 'macOS', tail: 12 }, // NSPopover's arrow on macOS 26
+  classic: { label: 'Classic', tail: 15 }, // the Office Assistant's long wedge
+  aqua: { label: 'Aqua', tail: 11 }, // a drop of gel
+  macos: { label: 'macOS', tail: 12, glass: true }, // NSPopover's arrow on macOS 26
   win98: { label: 'Windows 98', tail: 7 },
   system7: { label: 'System 7', tail: 12, corner: true },
   claude: { label: 'Claude', tail: 11 }, // a softer popover arrow
@@ -274,7 +277,7 @@ const CORNER_TIP = 2; // a corner tail's tip, in from the balloon's side
 // move each frame; re-laying it out while it animates drops frames).
 const LEAVE_MS = 180;
 const RETURN_MS = 160; // back up, when shown again mid-fade
-const balloon = { visible: false, h: 90, hiddenForDrag: false, side: 'below', content: null, shown: false, placed: '', follow: null };
+const balloon = { visible: false, loaded: false, mask: null, cut: '', h: 90, hiddenForDrag: false, side: 'below', content: null, shown: false, placed: '', follow: null };
 
 function createBubbleWindow() {
   bubbleWin = new BrowserWindow({
@@ -286,6 +289,7 @@ function createBubbleWindow() {
     frame: false,
     resizable: false,
     hasShadow: false,
+    visualEffectState: 'active', // a glass balloon keeps its material while another app has focus
     alwaysOnTop: true,
     skipTaskbar: true,
     fullscreenable: false,
@@ -295,17 +299,61 @@ function createBubbleWindow() {
     webPreferences: { preload: path.join(ROOT, 'src/main/preload.cjs'), contextIsolation: true },
   });
   bubbleWin.setAlwaysOnTop(true, 'floating');
+  applyBalloonMaterial();
   bubbleWin.loadFile(path.join(ROOT, 'src/renderer/bubble.html'));
   // Content sent before the page loaded would be lost: replay the latest.
   bubbleWin.webContents.on('did-finish-load', () => {
+    balloon.loaded = true;
     sendBalloonTheme();
     if (balloon.content) bubbleWin.webContents.send('bubble:content', balloon.content);
     if (balloon.visible) showBalloon();
   });
 }
 
+// A glass balloon's material goes on once its outline is known (the balloon
+// sends it as a mask, `bubble:mask`), so it is never seen filling the window;
+// it stays hidden until then. If the material cannot be cut (glassBroken), the
+// balloon draws its own surface instead.
+let glassBroken = process.platform !== 'darwin';
+const balloonGlass = () => Boolean(balloonTheme().glass) && !glassBroken;
+
+function applyBalloonMaterial() {
+  balloon.mask = null;
+  balloon.cut = '';
+  bubbleWin.setVibrancy(null);
+  bubbleWin.setHasShadow(false);
+}
+
+function setBalloonMask(png, width, height) {
+  if (!bubbleWin || !balloonGlass()) return;
+  const first = !balloon.mask;
+  balloon.mask = { png: Buffer.from(png, 'base64'), width, height };
+  balloon.cut = '';
+  if (first) {
+    bubbleWin.setVibrancy('popover');
+    bubbleWin.setHasShadow(true);
+  }
+  cutBalloonMaterial();
+  if (first && balloon.visible && !balloon.shown) showBalloon();
+}
+
+// Applies the mask once the window has the size it was drawn for.
+function cutBalloonMaterial() {
+  const mask = balloon.mask;
+  if (!mask || !balloonGlass()) return;
+  const [w, h] = bubbleWin.getSize();
+  const key = `${w}x${h}`;
+  if (w !== mask.width || h !== mask.height || key === balloon.cut) return;
+  if (setMaterialMask(bubbleWin, mask.png, w, h)) balloon.cut = key;
+  else {
+    glassBroken = true;
+    applyBalloonMaterial();
+    sendBalloonTheme();
+  }
+}
+
 function sendBalloonTheme() {
-  bubbleWin?.webContents.send('bubble:theme', { id: settings.balloon, tail: balloonTheme().tail });
+  bubbleWin?.webContents.send('bubble:theme', { id: settings.balloon, tail: balloonTheme().tail, glass: balloonGlass() });
 }
 
 // Below the pet if it fits, else above; slid sideways to keep EDGE_GAP from
@@ -342,6 +390,7 @@ function placeBalloon() {
     width: BALLOON_W + BALLOON_MARGIN * 2,
     height: bh + BALLOON_MARGIN * 2,
   });
+  cutBalloonMaterial(); // a resize can put the material back whole
   const place = { side, tailLeft: Math.round(tailLeft) };
   const key = JSON.stringify(place);
   if (key !== balloon.placed) {
@@ -355,6 +404,10 @@ function showBalloon({ focus = false } = {}) {
   // Created on first use (creating it together with the pet window let macOS
   // re-place the pet window).
   if (!bubbleWin) return createBubbleWindow();
+  // Still loading, or its glass is not cut yet: it is shown when it is ready
+  // (an "open" sent now would be lost, and the balloon would stay up with its
+  // content never brought in).
+  if (!balloon.loaded || (balloonGlass() && !balloon.mask)) return;
   if (balloon.hiddenForDrag || !win?.isVisible()) return;
   const opening = !balloon.shown; // (re)appearing, or caught while fading out
   stopFollowing();
@@ -633,6 +686,7 @@ function updateSettings(patch) {
     assistant.setBehavior({ responseStyle: settings.responseStyle, instructions: settings.instructions, claudeCode: settings.claudeCode });
   }
   if (patch.balloon !== undefined && patch.balloon !== prev.balloon) {
+    if (bubbleWin) applyBalloonMaterial();
     sendBalloonTheme();
     if (balloon.shown) { balloon.placed = ''; placeBalloon(); } // the tail changed
   }
@@ -1141,6 +1195,7 @@ function registerIpc() {
   });
   ipcMain.on('bubble:show', (_e, opts) => showBalloon(opts));
   ipcMain.on('bubble:hide', hideBalloon);
+  ipcMain.on('bubble:mask', (_e, png, width, height) => setBalloonMask(png, width, height));
   ipcMain.on('bubble:size', (_e, h) => {
     if (h > 0 && h !== balloon.h) {
       balloon.h = h;

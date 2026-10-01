@@ -2,11 +2,13 @@
 
 Each theme follows its platform's own documentation or measurements:
 
-- **Aqua**: *Aqua Human Interface Guidelines* (Apple, June 2002): push button,
-  text input field and keyboard focus figures (sizes from the text, colours
-  sampled from the figures).
-- **macOS**: an `NSPopover`, `NSTextField` and system colours captured on
-  macOS 26.
+- **Classic**: the Office Assistant's balloon, measured from a screenshot
+  (corners, tail, line spacing); the field and button are not from one.
+- **Aqua**: the balloon and field are Aqua gel, drawn here; the push
+  button follows the *Aqua Human Interface Guidelines* (Apple, June 2002):
+  end caps from the text, colours sampled from the figures.
+- **macOS**: the system's own popover material; the controls follow an
+  `NSPopover`, `NSTextField` and system colours captured on macOS 26 and 27.
 - **Windows 98**: the Windows 98 3D colours and bevels as recreated by
   [98.css](https://github.com/jdan/98.css).
 - **System 7**: *Inside Macintosh: More Macintosh Toolbox*, Help Manager,

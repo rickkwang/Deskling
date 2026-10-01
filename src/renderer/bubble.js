@@ -19,7 +19,9 @@ let tailLeft = 186;
 // places the window for it). Radius, tail shape and shadow blur come from the
 // theme's stylesheet.
 let tail = 7;
-const SHEEN = 22; // height of the Aqua gel highlight
+let glass = false; // the window's own material is the surface (macOS theme)
+const SHEEN = 34; // how far down the Aqua gel's top light reaches
+const GLOW = 22; // height of the light pooled along its bottom
 const shape = $('#shape');
 
 function themeGeometry() {
@@ -59,9 +61,9 @@ function tailSegments(kind, c, w, r) {
   }
   if (kind === 'office') {
     // Office Assistant balloon: a long, thin wedge leaning out to its tip,
-    // one edge nearly upright; it leans away from the balloon's middle.
+    // one edge upright; it leans away from the balloon's middle.
     const lean = c < w / 2 ? -1 : 1;
-    const [a, b] = [c - lean * 11, c - lean * 2];
+    const [a, b] = [c - lean * 9, c];
     return lean > 0
       ? { start: [a, 0], segs: [{ to: [c, t] }, { to: [b, 0] }] }
       : { start: [b, 0], segs: [{ to: [c, t] }, { to: [a, 0] }] };
@@ -89,27 +91,59 @@ function drawShape() {
   const segs = tailSegments(kind, tailLeft, w, r);
   const top = side === 'below' ? tailPath(segs, y0, -1, false) : '';
   const bottom = side === 'above' ? tailPath(segs, y1, 1, true) : '';
-  $('#shape-path').setAttribute('d',
-    `M${x0 + r} ${y0}${top}H${x1 - r}A${r} ${r} 0 0 1 ${x1} ${y0 + r}V${y1 - r}` +
+  const outline = `M${x0 + r} ${y0}${top}H${x1 - r}A${r} ${r} 0 0 1 ${x1} ${y0 + r}V${y1 - r}` +
     `A${r} ${r} 0 0 1 ${x1 - r} ${y1}${bottom}H${x0 + r}A${r} ${r} 0 0 1 ${x0} ${y1 - r}` +
-    `V${y0 + r}A${r} ${r} 0 0 1 ${x0 + r} ${y0}Z`);
+    `V${y0 + r}A${r} ${r} 0 0 1 ${x0 + r} ${y0}Z`;
+  $('#shape-path').setAttribute('d', outline);
+  if (glass) sendMask(outline, w, h);
   shape.setAttribute('width', w);
   shape.setAttribute('height', h);
   $('#shape-blur feGaussianBlur').setAttribute('stdDeviation', blur);
-  // Aqua: a gel highlight floating just inside the rim, a glow at the bottom.
-  setRect('#glass-sheen', 3, 2, w - 6, Math.min(SHEEN, h * 0.4));
-  setRect('#glass-glow', 0, h * 0.35, w, h * 0.65 + tail);
+  // Aqua: light falling on the top of the gel and pooling along its bottom,
+  // each a band across the whole shape that fades out into it. The bands
+  // run on over the tail, which takes the light of the edge it grows from.
+  const sheen = Math.min(SHEEN, h * 0.45);
+  setRect('#gel-sheen', 0, -tail - 1, w, sheen + tail + 1);
+  setRect('#gel-glow', 0, h - GLOW, w, GLOW + tail + 1);
+  $('#glass-sheen').setAttribute('y2', sheen);
+  for (const [k, v] of [['y1', h - GLOW], ['y2', h]]) $('#glass-glow').setAttribute(k, v);
   // Windows 98 (square corners): a raised frame lit from the top left. The
-  // outer line runs along the tail too, light on top and dark below; the
-  // inner line stops at the tail, where a patch of face colour covers it.
-  $('#bevel-outer-light').setAttribute('d', `M${x0} ${y1}V${y0}${top}H${x1}`);
-  $('#bevel-outer-dark').setAttribute('d', `M${x1} ${y0}V${y1}${bottom}H${x0}`);
-  $('#bevel-inner-light').setAttribute('d', `M1.5 ${h - 2}V1.5H${w - 2}`);
-  $('#bevel-inner-dark').setAttribute('d', `M${w - 1.5} 1V${h - 1.5}H1`);
+  // outer line runs along the tail too, light up its left slope and dark
+  // down its right one (like a pointed slider thumb); the inner line stops
+  // at the tail, where a patch of face colour covers it.
   const edge = side === 'below' ? y0 : y1;
   const sign = side === 'below' ? -1 : 1;
+  const tip = segs.segs.reduce((a, s, i, all) => (s.to[1] > all[a].to[1] ? i : a), 0);
+  const left = { start: segs.start, segs: segs.segs.slice(0, tip + 1) };
+  const right = { start: segs.segs[tip].to, segs: segs.segs.slice(tip + 1) };
+  const [tipX, tipOut] = right.start;
+  const lit = side === 'below'
+    ? `M${x0} ${y1}V${y0}${tailPath(left, edge, sign, false)}M${segs.segs.at(-1).to[0]} ${y0}H${x1}`
+    : `M${x0} ${y1}V${y0}H${x1}M${segs.start[0]} ${y1}${tailPath(left, edge, sign, false)}`;
+  const dark = side === 'below'
+    ? `M${tipX} ${edge + sign * tipOut}${tailPath(right, edge, sign, false)}M${x1} ${y0}V${y1}H${x0}`
+    : `M${x1} ${y0}V${y1}${tailPath(right, edge, sign, true)}M${segs.start[0]} ${y1}H${x0}`;
+  $('#bevel-outer-light').setAttribute('d', lit);
+  $('#bevel-outer-dark').setAttribute('d', dark);
+  $('#bevel-inner-light').setAttribute('d', `M1.5 ${h - 2}V1.5H${w - 2}`);
+  $('#bevel-inner-dark').setAttribute('d', `M${w - 1.5} 1V${h - 1.5}H1`);
   const inside = edge - sign * 2.5;
   $('#tail-patch').setAttribute('d', `M${segs.start[0]} ${inside}${tailPath(segs, edge, sign, false).replace(/^H[\d.-]+/, `V${edge}`)}V${inside}Z`);
+}
+
+// The outline as main cuts the window's material to it: a picture of the
+// whole window (the balloon sits MARGIN in from its edges), opaque inside.
+const MARGIN = 14; // bubble.css body padding
+function sendMask(outline, w, h) {
+  const scale = 2;
+  const canvas = document.createElement('canvas');
+  canvas.width = (w + MARGIN * 2) * scale;
+  canvas.height = (h + MARGIN * 2) * scale;
+  const g = canvas.getContext('2d');
+  g.scale(scale, scale);
+  g.translate(MARGIN, MARGIN);
+  g.fill(new Path2D(outline));
+  api.mask(canvas.toDataURL('image/png').split(',')[1], w + MARGIN * 2, h + MARGIN * 2);
 }
 
 function setRect(sel, x, y, width, height) {
@@ -146,7 +180,8 @@ api.onFocus(() => input.focus());
 
 api.onTheme((theme) => {
   document.body.dataset.theme = theme.id;
-  tail = theme.tail;
+  document.body.toggleAttribute('data-glass', Boolean(theme.glass));
+  ({ tail, glass = false } = theme);
   drawShape(); // the size may not change, but radius and tail do
 });
 

@@ -3,11 +3,12 @@
    line white and dark grey), a sunken white field, and a "Send" push button
    drawn as the default button (the extra black frame), in Microsoft Sans
    Serif, the outline version of MS Sans Serif, the Windows 98 system font
-   (Tahoma only arrived with Windows 2000); macOS ships it. Colours and
+   (Tahoma only arrived with Windows 2000); macOS ships it. 8 points, which
+   Windows drew 11 pixels high. Colours and
    bevels as in 98.css (github.com/jdan/98.css), which matches the Windows 98
    system colours. */
 [data-theme="win98"] {
-  --font: 12px/1.4 "Microsoft Sans Serif", Tahoma, "PingFang SC", sans-serif;
+  --font: 11px/1.4 "Microsoft Sans Serif", Tahoma, "PingFang SC", sans-serif;
   --face: #c0c0c0;
   --ink: #000;
   --hint: #808080;

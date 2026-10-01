@@ -4,8 +4,8 @@
    This file is the layout every balloon theme shares. The look lives in
    balloon-themes/<theme>.css, scoped by body[data-theme] (set by bubble.js
    from the Balloon setting). A theme sets:
-   - the geometry bubble.js reads: --radius, --tail-shape (straight, popover
-     or corner) and --shadow-blur (the tail's length is set in main.js);
+   - the geometry bubble.js reads: --radius, --tail-shape (straight, popover,
+     corner or office) and --shadow-blur (the tail's length is set in main.js);
    - the colours of the SVG shape (#shape .fill, .rim, .shadow-soft, ...);
    - the look of #msg, #ask, #input and #send. */
 :root {
@@ -56,7 +56,7 @@ body.open #bubble {
   overflow: visible;
   pointer-events: none;
 }
-#shape .shadow-soft, #shape .shadow-hard { fill: none; }
+#shape .shadow-soft, #shape .shadow-hard, #shape .glow, #shape .sheen { fill: none; }
 #shape .glass, #shape .bevel, #shape .tail-patch { display: none; }
 #shape .rim { fill: none; stroke-width: 1; }
 

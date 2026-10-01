@@ -1,17 +1,19 @@
 /* Classic: the Office Assistant balloon (Office 97 to 2003), as in "What
    would you like to do?": a pale yellow balloon with a one-pixel black
-   outline, rounded corners and no shadow, a long thin wedge for a tail, and
-   Tahoma 8 pt. A light grey line sets off the question, which goes in a flat
-   white field; the button is flat too, a light face in a thin grey frame. */
+   outline, 7-pixel corners and no shadow, a long thin wedge for a tail (9
+   wide, 15 long, one edge upright), and Tahoma 8 pt on 16-pixel lines, set
+   close to the edge; measured from a screenshot of one. An etched line in
+   the paper's own yellow sets off the question, which goes in a flat white
+   field; the button is flat too, a light face in a thin grey frame. */
 [data-theme="classic"] {
   --font: 11px/1.45 Tahoma, "Microsoft Sans Serif", "PingFang SC", sans-serif;
   --paper: #ffffcc;
   --ink: #000;
+  --rule: #d2ce98;
   --edge: #000;
-  --rule: #c8c8b4;
   --hint: #808080;
   --error: #800000;
-  --radius: 9;
+  --radius: 7;
   --tail-shape: office;
   --shadow-blur: 0;
 }
@@ -20,9 +22,19 @@
 
 [data-theme="classic"] ::selection { background: #316ac5; color: #fff; }
 
-[data-theme="classic"] #msg { padding: 9px 10px 8px; }
+[data-theme="classic"] #msg { padding: 6px 8px 6px; }
 
-[data-theme="classic"] #ask { gap: 8px; padding: 8px 9px 9px; }
+/* The rule is etched into the paper: a darker yellow line with a pale one
+   under it, stopping short of the black outline. */
+[data-theme="classic"] #ask {
+  gap: 8px;
+  padding: 8px 7px 8px;
+  border-top: 0;
+  background:
+    linear-gradient(var(--rule), var(--rule)) 7px 0 / calc(100% - 14px) 1px no-repeat,
+    linear-gradient(#fffff0, #fffff0) 7px 1px / calc(100% - 14px) 1px no-repeat;
+}
+[data-theme="classic"] #msg:empty + #ask { background: none; }
 
 /* Flat white field. */
 [data-theme="classic"] #input {
