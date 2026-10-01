@@ -1,3 +1,5 @@
+**New in 0.3.12:** drag the pet to another desktop like any window: hold it at the side of the screen and it goes to the next desktop with you. Clawd, the pixel crab, is now the default character, and there is a new Claude balloon style in Assistant Settings.
+
 **Improved in 0.3.11:** the balloon now fades out smoothly when you switch to another app, instead of sometimes vanishing at once, and the pet's hello folds away on its own after you've had time to read it.
 
 **Improved in 0.3.10:** the balloon folds away when you switch to another app, like the Office Assistant's, so you no longer have to click the pet to close it. A reply that arrives while you're away waits for you, a Claude Code notice stays until you've seen it, and anything you were typing is still there next time.
