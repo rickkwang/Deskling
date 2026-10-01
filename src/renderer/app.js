@@ -14,9 +14,10 @@ const PAD = 6; // transparent margin around the pet
 // Focus timer pill (style.css), above the pet's head: wider for "1:25:00".
 const TIMER_W = { short: 68, long: 92 };
 const TIMER_H = 20;
-const TIMER_GAP = 3;
+const TIMER_GAP = 8;
 
 let runtime = null;
+let restShift = 0; // the resting pose's centre, right of its cell's centre (restingShift)
 let character = null;
 let busy = false;
 let settings = {};
@@ -31,6 +32,12 @@ function mountCharacter({ data, sheetUrl }) {
   runtime?.destroy();
   character = data;
   runtime = new CharacterRuntime(petEl, data, sheetUrl);
+  restShift = 0;
+  restingShift(data, sheetUrl).then((shift) => {
+    if (character !== data || shift === restShift) return;
+    restShift = shift;
+    applyLayout();
+  });
   applyLayout();
   petEl.setAttribute('aria-label', data.displayName);
   runtime.addEventListener('state', (e) => {
@@ -46,6 +53,37 @@ function mountCharacter({ data, sheetUrl }) {
 }
 
 // ---- layout -----------------------------------------------------------------
+
+// How far the resting pose's centre is from the centre of its sprite cell, in
+// cell pixels. Few characters are drawn exactly in the middle of their cells
+// (F1 is 5 px right, Clawd 4.5 px left), and the timer pill is centred over
+// the character, not over the cell.
+async function restingShift(data, sheetUrl) {
+  const { cellWidth: w, cellHeight: h } = data.spritesheet;
+  const cells = data.animations[data.states.idle.animations[0]].frames.find((f) => f.cells.length)?.cells;
+  if (!cells) return 0;
+  try {
+    const img = new Image();
+    img.src = sheetUrl;
+    await img.decode();
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    for (const [col, row] of cells) ctx.drawImage(img, col * w, row * h, w, h, 0, 0, w, h);
+    const px = ctx.getImageData(0, 0, w, h).data;
+    let left = w, right = -1;
+    for (let i = 3; i < px.length; i += 4) {
+      if (px[i] < 48) continue;
+      const x = ((i - 3) / 4) % w;
+      if (x < left) left = x;
+      if (x > right) right = x;
+    }
+    return right < left ? 0 : (left + right + 1) / 2 - w / 2;
+  } catch {
+    return 0;
+  }
+}
 
 async function applyLayout() {
   const scale = settings.scale || 1;
@@ -63,7 +101,8 @@ async function applyLayout() {
   petEl.style.transform = scale === 1 ? '' : `scale(${scale})`;
   // Pixel-exact only when every sprite pixel maps to whole device pixels.
   petEl.classList.toggle('crisp', Number.isInteger(scale * window.devicePixelRatio));
-  timerEl.style.left = `${cx - pillW / 2}px`;
+  // Over the character's middle, as far as the window goes.
+  timerEl.style.left = `${Math.max(0, Math.min(w - pillW, Math.round(cx + restShift * scale - pillW / 2)))}px`;
   timerEl.style.top = `${PAD}px`;
   timerEl.style.width = `${pillW}px`;
   await window.pet.layout({ width: w, height: baseline + PAD, anchorX: cx, anchorY: baseline, petW, petH, top });
