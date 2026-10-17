@@ -23,7 +23,7 @@ when a new version is out, and **Update to …** in its right-click menu install
 npm install
 npm start                      # the pet (tray 📎: show/hide/quit; right-click the pet for the menu)
 npm run selftest               # end-to-end: idle → click → listening → thinking → speaking → idle
-npm test                       # unit tests: runtime semantics, assistant, focus timer, Claude Code, updater, sheet import
+npm test                       # unit tests: runtime semantics, assistant, focus timer, Claude Code, updater, sheet import, the report desklog
 npm run validate               # validate every characters/*/character.json
 npm run eval:prompts           # try the chat prompt on the local Ollama model (limits, refusals)
 npm run dist                   # release/: Deskling-<version>-arm64.dmg + .zip + latest-mac.yml (ad-hoc signed)
@@ -37,7 +37,7 @@ npx electron . --selftest --edge --hold=60000 --timer-demo=60   # QA: start the 
 
 ## Menus and settings
 
-- Right-click or long-press the pet: **Chat…** (opens the balloon to type), **Speech** (read replies aloud), **Character ▸**, **Focus Timer ▸**, **New Conversation**, **Settings…**, **About Deskling** (version), **Check for Updates…** (or **Update to …** once one is out), **Quit Deskling**. The tray menu has **Focus Timer ▸**, About and the update item too.
+- Right-click or long-press the pet: **Chat…** (opens the balloon to type), **Speech** (read replies aloud), **Character ▸**, **Focus Timer ▸**, **New Conversation**, **Settings…**, **About Deskling** (version), **Check for Updates…** (or **Update to …** once one is out), **Report a Problem…**, **Quit Deskling**. The tray menu has **Focus Timer ▸**, About, the update item and **Report a Problem…** too.
 - **Focus Timer** (Pomodoro): a focus session, then a break that starts on its own; after the break it waits for you to start the next round. A pill above the pet's head counts down in the balloon style (click it to pause, resume or start the next round). When a phase ends it plays the chosen sound and the character says a line written by the model, or a preset one from its `persona.timer` when the model is unavailable; with the pet hidden, a system notification does instead.
 - **Settings** has two tabs:
   - **Character**: the Show Pet switch, the character grid, Size, and the speech Balloon style (Classic, Aqua, macOS, Windows 98, System 7, Claude).
@@ -45,6 +45,7 @@ npx electron . --selftest --edge --hold=60000 --timer-demo=60   # QA: start the 
   - **Behavior**: Greeting, Speech, Chat, Response Style (Concise, Normal or Detailed), local Model, Claude Code (below), and **Advanced** (folded away): the Focus timer (focus and break length in hours, minutes and seconds; the end Sound) and free-form Instructions (up to 500 characters).
 - **Claude Code ▸ Work along** (Behavior tab), like Codex's pets: while a Claude Code session works, the pet works too (its thinking animation), and its balloon shows what needs you: Claude waiting for a permission or an answer, a turn that stopped with an error, or one of 20 seconds or more that is done (with the first line of Claude's reply; quicker ones you watched finish). The most urgent one shows, with a count of the rest; each goes away once seen (you answer, prompt that session again, or close the balloon). Notices are in Chinese when you write to Claude in Chinese, and the pet remembers them, so you can ask it what Claude did. The switch adds hooks to `~/.claude/settings.json` (`$CLAUDE_CONFIG_DIR` if set; backed up to `settings.json.deskling-backup` first, permissions and symlinks kept; hooks from an older Deskling are updated at launch) that post each event to Deskling on `127.0.0.1:47823`; they stay silent when Deskling isn't running, and turning the switch off removes them. `npx electron . --selftest --edge --hold=60000 --claude-code[=<port>]` listens without installing them, on another port if your own Deskling is running (QA).
 - Settings are saved to `~/Library/Application Support/Deskling/settings.json`.
+- **Report a Problem…** copies Deskling's facts to your clipboard (its version, how it is set, whether Ollama answered, and the last lines of the app's own error log) and opens a GitHub issue in your browser. Nothing is sent until you paste it into the form, and paths are scrubbed from the text. The log it takes from is `~/Library/Application Support/Deskling/deskling.log`: the app's errors and its windows' console warnings (crash stacks included), rotated at 256 KB, one older copy kept, never read out automatically — delete it any time.
 - `electron . --settings-preview=character|behavior` captures the settings window to `qa/` for QA.
 
 ## Releasing

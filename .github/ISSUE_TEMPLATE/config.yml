@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Installing or updating Deskling
+    about: The blocked-on-first-launch steps (and the one-line fix for "is damaged") live in the README.
+    url: https://github.com/rickkwang/Deskling#install

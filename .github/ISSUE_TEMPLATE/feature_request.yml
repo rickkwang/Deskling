@@ -1,0 +1,21 @@
+name: Feature idea
+description: What Deskling could do that it doesn't yet
+labels: ['enhancement']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Deskling stays small on purpose (a pet with a timer, chat and Claude Code's
+        notices), but that doesn't mean it is finished. Ideas are welcome — 中文可以。
+  - type: textarea
+    id: want
+    attributes:
+      label: The idea
+      description: What you asked for, in a sentence or two.
+    validations:
+      required: true
+  - type: textarea
+    id: instead
+    attributes:
+      label: What you do instead today
+      description: The workaround, or how much you miss it.

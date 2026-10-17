@@ -1,6 +1,7 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, Notification, Tray, nativeImage, screen, shell, systemPreferences } from 'electron';
 import { execFile, execFileSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Assistant, RESPONSE_STYLES } from '../ai/assistant.js';
@@ -10,6 +11,8 @@ import { setMaterialMask } from './glass-mask.js';
 import { FocusTimer, LIMITS, validSeconds, PRESETS, SOUNDS, duration, minutesLeft } from './focus-timer.js';
 import { checkForUpdate, prepareInstall, releasePage } from './updater.js';
 import { ClaudeSessions, claudeSettingsFile, hooksInstalled, listen, readClaudeSettings, setHooks } from './claude-code.js';
+import { openLog, readTail, teeConsole } from './desklog.js';
+import { buildReport, chatFacts, NEW_BUG_URL } from './diagnostics.js';
 import { decodePng, encodePng } from '../character/png-codec.js';
 import { aboutOf, cutSheet, described, idFromName, makeCharacter, renamed } from '../character/sheet-import.js';
 import { SHEET_PROMPT } from '../character/sheet-prompt.js';
@@ -31,6 +34,9 @@ const TIMER_DEMO = Number(arg('timer-demo')) || 0;
 const CLAUDE_DEMO = process.argv.some((a) => a === '--claude-code' || a.startsWith('--claude-code='));
 // QA: electron . --audit  (sprite/animation visibility audit for every character)
 const AUDIT = process.argv.includes('--audit');
+// QA modes speak through the terminal and their qa/ captures: no dialog, no
+// clipboard write and no browser opens from a test run.
+const QA = SELFTEST || PREVIEW || Boolean(SETTINGS_PREVIEW) || AUDIT;
 // QA captures: in the project, or beside the settings in a packaged app (its
 // own files are read-only).
 const qaDir = (...parts) => path.join(app.isPackaged ? app.getPath('userData') : ROOT, 'qa', ...parts);
@@ -42,6 +48,31 @@ let bubbleWin = null;
 let settingsWin = null;
 let tray = null;
 const assistant = new Assistant();
+
+// ---- log -------------------------------------------------------------------
+// The app keeps its own short record of what went wrong (desklog.js), so a
+// problem can be handed over with "Report a Problem…" rather than only felt.
+// QA sessions write beside their captures instead of touching the real log.
+// Until the app is ready (and in its place afterwards), a silent stand-in.
+const silentLog = { info() {}, warn() {}, error() {}, file: '' };
+let log = silentLog;
+let quitting = false;
+let lastCrashShown = 0;
+
+const listenRenderer = (contents, label) => {
+  // The renderer's console is otherwise unheard of here: its errors would never
+  // reach a report. debug/info stay out — they are the pet chattering, not a bug.
+  contents.on('console-message', ({ level, message }) => {
+    if (level === 'error' || level === 'warning') log.warn(`${label} ${level}: ${message}`);
+  });
+  contents.on('render-process-gone', (e, why) => log.error(`${label} renderer gone (${why?.reason})`));
+  contents.on('unresponsive', () => log.warn(`${label} window froze`));
+};
+
+const reportablePaths = () => [ // nothing a report says may name this Mac: given paths and their real ones
+  app.getPath('home'), app.getPath('userData'), app.getPath('appData'), os.tmpdir(),
+  claudeSettingsFile(), // CLAUDE_CODE_CONFIG_DIR may sit outside home, plain in an error message
+].flatMap((p) => { try { return [p, fs.realpathSync(p)]; } catch { return [p]; } });
 
 // ---- settings -------------------------------------------------------------
 
@@ -247,6 +278,7 @@ function createWindow() {
   win.setAlwaysOnTop(true, 'floating');
   win.setIgnoreMouseEvents(true, { forward: true });
   win.loadFile(path.join(ROOT, 'src/renderer/index.html'));
+  listenRenderer(win.webContents, 'pet');
   win.once('ready-to-show', () => { if (settings.enabled || SELFTEST) win.showInactive(); });
   // While dragging, learn positions macOS refuses (see drag-follow.js).
   win.on('move', () => {
@@ -307,6 +339,7 @@ function createBubbleWindow() {
   bubbleWin.setAlwaysOnTop(true, 'floating');
   applyBalloonMaterial();
   bubbleWin.loadFile(path.join(ROOT, 'src/renderer/bubble.html'));
+  listenRenderer(bubbleWin.webContents, 'balloon');
   // Content sent before the page loaded would be lost: replay the latest.
   bubbleWin.webContents.on('did-finish-load', () => {
     balloon.loaded = true;
@@ -486,6 +519,7 @@ function createPreviewWindow() {
     webPreferences: { preload: path.join(ROOT, 'src/main/preload.cjs'), contextIsolation: true },
   });
   win.loadFile(path.join(ROOT, 'src/renderer/preview.html'));
+  listenRenderer(win.webContents, 'preview'); // QA windows report too, into the qa/ copy
   if (process.argv.includes('--capture')) {
     win.webContents.once('did-finish-load', async () => {
       await new Promise((r) => setTimeout(r, 1500));
@@ -745,6 +779,7 @@ function openSettings(tab) {
     webPreferences: { preload: path.join(ROOT, 'src/main/preload.cjs'), contextIsolation: true },
   });
   settingsWin.loadFile(path.join(ROOT, 'src/renderer/settings.html'), tab ? { hash: tab } : undefined);
+  listenRenderer(settingsWin.webContents, 'settings');
   settingsWin.once('ready-to-show', () => {
     settingsWin.show();
     app.focus({ steal: true });
@@ -1087,7 +1122,49 @@ function appMenu() {
     version
       ? { label: update.installing ? `Updating to ${version}…` : `Update to ${version}…`, enabled: !update.installing, click: installUpdate }
       : { label: 'Check for Updates…', click: checkUpdatesNow },
+    { type: 'separator' },
+    { label: 'Report a Problem…', click: reportProblem },
   ];
+}
+
+// ---- report a problem -----------------------------------------------------
+// The feedback loop is deliberate, not automatic: the pet's facts (versions,
+// settings, whether Ollama answers, and the tail of its own error log) go on
+// the clipboard for the GitHub bug form, and nothing is sent until the user
+// pastes it there — and can read it first. Ollama is asked without waiting
+// for (or starting) it, and QA runs keep the clipboard and browser alone.
+
+const reportFacts = async () => {
+  let ai = null;
+  try { ai = await assistant.refresh(settings.model, { wait: false }); } catch { /* what detect would say is enough */ }
+  const claude = claudeState();
+  return {
+    version: app.getVersion(),
+    now: new Date(),
+    electron: process.versions.electron,
+    mac: process.platform === 'darwin' ? process.getSystemVersion() : process.platform,
+    arch: process.arch,
+    locale: app.getLocale(),
+    character: settings.character,
+    balloon: balloonTheme()?.label || settings.balloon,
+    scale: Math.round((settings.scale || 1) * 100),
+    showPet: settings.enabled,
+    ...chatFacts(settings.ollama, ai || {}), // the Chat line is diagnostics' wording, tested there
+    claudeHooks: claude.hooks,
+    claudeError: claude.error,
+    paths: reportablePaths(),
+    logTail: readTail(path.dirname(log.file)),
+  };
+};
+
+async function reportProblem() {
+  if (QA) return console.log('[report] QA: the clipboard and browser stay alone');
+  const text = buildReport(await reportFacts());
+  clipboard.writeText(text);
+  shell.openExternal(NEW_BUG_URL);
+  if (Notification.isSupported()) {
+    new Notification({ title: 'Deskling', body: `Deskling's facts are on your clipboard: paste them into the report you opened. Nothing was sent on its own.` }).show();
+  }
 }
 
 // ---- IPC ------------------------------------------------------------------
@@ -1254,6 +1331,10 @@ function registerIpc() {
       const reply = await assistant.send(text, (token) => e.sender.send('ai:token', token));
       return { ok: true, text: reply, model: assistant.model?.name };
     } catch (err) {
+      // The failure kinds ("chat didn't answer") reach the log — the kinds
+      // only: what the user typed stays with the balloon. A cancel is no
+      // failure; the chronology in a report wouldn't want it.
+      if (err.name !== 'AbortError') log.warn(`chat failed: ${err.message}`);
       return { ok: false, error: err.name === 'AbortError' ? 'ABORTED' : err.message };
     }
   });
@@ -1295,12 +1376,36 @@ function registerIpc() {
 
 if (!SELFTEST && !PREVIEW && !SETTINGS_PREVIEW && !AUDIT && !app.requestSingleInstanceLock()) app.quit();
 app.on('second-instance', () => updateSettings({ enabled: true }));
+app.on('before-quit', () => { quitting = true; });
 // The user went to another app (the pet and its balloon count as one).
 // Quitting also resigns active, after the pet window is already destroyed.
 app.on('did-resign-active', () => { if (win && !win.isDestroyed()) win.webContents.send('pet:away'); });
 
+// A crash reaches the log (and with it a report someone can paste) instead of
+// only being felt. Electron's own error box would be silenced by this handler,
+// so the box stays — mine, with the way out in it — but only for the real app,
+// at most one per ten seconds, and never while a quit is already under way
+// (the box that kept coming back in 0.3.4 is exactly that mistake). The
+// console is the voice before the logger exists (silentLog): its tee carries
+// the same line into the log once ready, and a pre-ready crash keeps its
+// stderr record and box instead of vanishing.
+process.on('uncaughtException', (e) => {
+  console.error(`uncaught: ${e?.stack || e}`);
+  if (QA || quitting) return;
+  if (Date.now() - lastCrashShown > 10_000) {
+    lastCrashShown = Date.now();
+    try {
+      dialog.showErrorBox('Deskling hit a problem', 'Something unexpected went wrong.\n\n“Report a Problem…” (the pet or tray menu) copies the details for you to send along with a report.');
+    } catch { /* a refused dialog leaves the stderr record above */ }
+  }
+});
+process.on('unhandledRejection', (e) => console.error(`unhandledRejection: ${e?.reason ?? e}`));
+
 app.whenReady().then(() => {
   migrateUserData();
+  log = openLog(QA ? qaDir() : app.getPath('userData'));
+  teeConsole(console, log);
+  log.info(`Deskling ${app.getVersion()} · Electron ${process.versions.electron} · ${process.platform} ${process.getSystemVersion?.() || ''} ${process.arch}${QA ? ' (QA)' : ''}`);
   loadSettings();
   app.setAboutPanelOptions({
     applicationName: 'Deskling',
@@ -1332,7 +1437,9 @@ app.whenReady().then(() => {
   if (SETTINGS_PREVIEW) return openSettings(SETTINGS_PREVIEW);
   if (AUDIT) {
     win = new BrowserWindow({ show: false, webPreferences: { preload: path.join(ROOT, 'src/main/preload.cjs'), contextIsolation: true } });
-    return win.loadFile(path.join(ROOT, 'src/renderer/audit.html'));
+    win.loadFile(path.join(ROOT, 'src/renderer/audit.html'));
+    listenRenderer(win.webContents, 'audit');
+    return;
   }
   createWindow();
   createTray();

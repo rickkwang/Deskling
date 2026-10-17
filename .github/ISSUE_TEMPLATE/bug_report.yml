@@ -1,0 +1,35 @@
+name: Bug report
+description: Something went wrong — the pet, chat, the timer, Claude Code or an update
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping Deskling get better. Everything here is public, but
+        **Report a Problem…** (in the pet's or tray menu) was designed for this: it puts
+        Deskling's facts and its last errors on your clipboard, ready to paste below.
+        You can edit or delete lines first — nothing was sent on its own.
+
+        Reports work in English or 中文.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you expected, and what Deskling did instead. A screenshot says a lot.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to get there
+      description: Starting from opening Deskling, what you did. If it only happens sometimes, say roughly how often.
+    validations:
+      required: true
+  - type: textarea
+    id: facts
+    attributes:
+      label: Deskling's facts
+      description: |
+        Right-click the pet and choose **Report a Problem…** (or **Report a Problem…** in the tray's menu), then paste here.
+        It holds the app's version, how it is set, whether Ollama answered, and the last lines of its own error log — never your conversations.
+        Don't have it? Just leave this empty.
