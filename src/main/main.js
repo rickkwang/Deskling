@@ -100,7 +100,10 @@ function loadSettings() {
   delete settings.x;
   delete settings.y;
   if (!(settings.balloon in BALLOON_THEMES)) settings.balloon = 'classic';
-  if (!(settings.responseStyle in RESPONSE_STYLES)) settings.responseStyle = 'normal'; // styles since removed
+  if (!(settings.responseStyle in RESPONSE_STYLES)) { // a style since removed: store what the settings show
+    settings.responseStyle = 'normal';
+    saveSettings();
+  }
   if (!validSeconds('focus', settings.focusSeconds)) settings.focusSeconds = 25 * 60;
   if (!validSeconds('break', settings.breakSeconds)) settings.breakSeconds = 5 * 60;
   if (!(settings.timerSound in SOUNDS)) settings.timerSound = 'indigo';
