@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('pet', {
   onCharacter: on('pet:character'),
   onRenamed: on('pet:renamed'),
   onVisibility: on('pet:visibility'),
+  onChat: on('pet:chat'),
   onChatReset: on('chat:reset'),
   onUpdateAvailable: on('update:available'),
   onUpdateStatus: on('update:status'),

@@ -1,5 +1,7 @@
-// Assistant Settings window: Character + Behavior tabs. Every change is sent to
+// Settings window: Character + Behavior tabs. Every change is sent to
 // the main process, which persists it and broadcasts it to the pet.
+
+import { offlineReason, modelNote } from '../ai/offline-lines.js';
 
 const $ = (sel) => document.querySelector(sel);
 const { settings: initial, characters: initialCharacters, ai: initialAi, styles, balloons, timer, claudeCode: initialClaude } = await window.pet.getSettings();
@@ -299,11 +301,10 @@ function renderModels() {
   if (ai.models.length) {
     for (const m of ai.models) modelSelect.add(new Option(m, m));
     modelSelect.value = ai.models.includes(settings.model) ? settings.model : ai.model;
-    $('#model-note').textContent = 'Local Ollama model';
   } else {
     modelSelect.add(new Option(ai.available ? 'No local models' : 'Ollama not running', ''));
-    $('#model-note').textContent = ai.available ? 'Pull one with ollama pull' : 'Install it from ollama.com';
   }
+  $('#model-note').textContent = modelNote(offlineReason({ ...ai, enabled: settings.ollama !== false }));
   modelSelect.disabled = !ai.models.length || !settings.ollama;
 }
 // Switched on: Ollama starts if it isn't running; look again once it's up.

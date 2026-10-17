@@ -540,6 +540,14 @@ window.pet.onChatReset(() => {
   else say(greeting());
   runtime.setState('idle');
 });
+// "Chat…" in the right-click menu: the balloon opens ready to type, as a click
+// on the pet does. Without a model, it is a poke instead.
+window.pet.onChat(() => {
+  if (!busy && offline() && !showingNotice()) return poke();
+  if (!busy && !balloonOpen) content = { ...content, error: false, dots: false };
+  listen({ clicked: true });
+  openBubble({ focus: true });
+});
 // One switch at a time, to the latest choice: picks made while a character
 // is leaving or entering are not played in between.
 let wanted = null;

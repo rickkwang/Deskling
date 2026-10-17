@@ -1,12 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Pokes, offlineReason } from '../src/ai/offline-lines.js';
+import { Pokes, offlineReason, modelNote } from '../src/ai/offline-lines.js';
 
 test('offlineReason: off, not running, no model, or ready', () => {
   assert.equal(offlineReason({ enabled: false, available: true, model: 'm' }), 'off');
   assert.equal(offlineReason({ enabled: true, available: false, model: null }), 'unavailable');
   assert.equal(offlineReason({ enabled: true, available: true, model: null }), 'noModel');
   assert.equal(offlineReason({ enabled: true, available: true, model: 'm' }), null);
+});
+
+test('modelNote tells the user the fix for each reason', () => {
+  assert.match(modelNote('noModel'), /ollama pull qwen2\.5:1\.5b/);
+  assert.match(modelNote('unavailable'), /ollama\.com/);
+  assert.doesNotMatch(modelNote('off'), /ollama/i);
+  assert.equal(modelNote(null), 'Local Ollama model');
 });
 
 test('pokes never repeat the last line and fill in the name', () => {

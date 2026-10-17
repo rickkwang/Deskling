@@ -53,7 +53,7 @@ let settings = {
   petX: null, petY: null,
   scale: 1,
   balloon: 'classic', // speech balloon theme (BALLOON_THEMES)
-  // Behavior (Assistant Settings)
+  // Behavior (Settings)
   enabled: true, greeting: true, speech: false, responseStyle: 'normal', instructions: '',
   focusSeconds: 25 * 60, breakSeconds: 5 * 60, timerSound: 'indigo', // Focus Timer
   claudeCode: false, // work along with Claude Code (hooks in its settings.json)
@@ -279,7 +279,7 @@ const CORNER_TIP = 2; // a corner tail's tip, in from the balloon's side
 // move each frame; re-laying it out while it animates drops frames).
 const LEAVE_MS = 180;
 const RETURN_MS = 160; // back up, when shown again mid-fade
-const balloon = { visible: false, loaded: false, mask: null, cut: '', h: 90, hiddenForDrag: false, side: 'below', content: null, shown: false, placed: '', follow: null };
+const balloon = { visible: false, loaded: false, focus: false, mask: null, cut: '', h: 90, hiddenForDrag: false, side: 'below', content: null, shown: false, placed: '', follow: null };
 
 function createBubbleWindow() {
   bubbleWin = new BrowserWindow({
@@ -403,6 +403,7 @@ function placeBalloon() {
 
 function showBalloon({ focus = false } = {}) {
   balloon.visible = true;
+  balloon.focus ||= focus;
   // Created on first use (creating it together with the pet window let macOS
   // re-place the pet window).
   if (!bubbleWin) return createBubbleWindow();
@@ -422,7 +423,8 @@ function showBalloon({ focus = false } = {}) {
     bubbleWin.setOpacity(1);
     bubbleWin.webContents.send('bubble:open', true);
   }
-  if (focus) {
+  if (balloon.focus) {
+    balloon.focus = false;
     bubbleWin.focus();
     bubbleWin.webContents.send('bubble:focus');
   }
@@ -430,6 +432,7 @@ function showBalloon({ focus = false } = {}) {
 
 function hideBalloon() {
   balloon.visible = false;
+  balloon.focus = false;
   fadeOutBalloon();
 }
 
@@ -720,7 +723,7 @@ function openSettings(tab) {
   settingsWin = new BrowserWindow({
     width: SETTINGS_W,
     height: SETTINGS_H,
-    title: 'Assistant',
+    title: 'Settings',
     // Content runs under the title bar so the page is one surface; it draws
     // its own centred title and drag region.
     titleBarStyle: 'hiddenInset',
@@ -761,6 +764,8 @@ function openSettings(tab) {
 
 function buildContextMenu() {
   return Menu.buildFromTemplate([
+    { label: 'Chat…', click: () => win.webContents.send('pet:chat') },
+    { type: 'separator' },
     { label: 'Speech', type: 'checkbox', checked: settings.speech, click: (item) => updateSettings({ speech: item.checked }) },
     {
       label: 'Character',
@@ -772,11 +777,11 @@ function buildContextMenu() {
     { label: 'Focus Timer', submenu: timerMenu() },
     { type: 'separator' },
     { label: 'New Conversation', click: () => { assistant.reset(); win.webContents.send('chat:reset'); } },
-    { label: 'Assistant Settings…', click: () => openSettings() },
+    { label: 'Settings…', click: () => openSettings() },
     { type: 'separator' },
     ...appMenu(),
     { type: 'separator' },
-    { label: 'Quit Assistant', click: () => app.quit() },
+    { label: 'Quit Deskling', click: () => app.quit() },
   ]);
 }
 
@@ -785,13 +790,13 @@ function updateTray() {
   const t = timer.status();
   trayLeft = t.left ? timeLeft(t) : '';
   tray.setContextMenu(Menu.buildFromTemplate([
-    { label: 'Desktop Assistant', type: 'checkbox', checked: settings.enabled, click: (item) => updateSettings({ enabled: item.checked }) },
+    { label: 'Show Pet', type: 'checkbox', checked: settings.enabled, click: (item) => updateSettings({ enabled: item.checked }) },
     { label: 'Focus Timer', submenu: timerMenu() },
-    { label: 'Assistant Settings…', click: () => openSettings() },
+    { label: 'Settings…', click: () => openSettings() },
     { type: 'separator' },
     ...appMenu(),
     { type: 'separator' },
-    { label: 'Quit Assistant', click: () => app.quit() },
+    { label: 'Quit Deskling', click: () => app.quit() },
   ]));
 }
 
@@ -1227,11 +1232,10 @@ function registerIpc() {
   ipcMain.handle('characters:delete', (_e, id) => deleteCharacter(id));
   ipcMain.on('characters:copy-prompt', () => clipboard.writeText(SHEET_PROMPT));
   ipcMain.on('win:hide', () => {
+    if (settings.enabled) return win.webContents.send('pet:visibility', 'show');
     hideBalloon(); // already faded out by the pet before its Hide animation
     bubbleWin?.hide();
     win.hide();
-    // Hidden from the pet itself (e.g. Hide animation) = Desktop Assistant off.
-    if (settings.enabled) updateSettings({ enabled: false });
   });
   ipcMain.on('menu:context', () => buildContextMenu().popup({ window: win }));
 
