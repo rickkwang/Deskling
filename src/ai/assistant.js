@@ -51,7 +51,7 @@ export function languageRule(text, locale = '') {
 
 // Response Style options shown in Settings. Each sets the reply's
 // length for a real question as a concrete target (small local models follow
-// numbers far better than "brief"); the tone styles answer at Normal length.
+// numbers far better than "brief").
 // SHORT keeps them from padding a greeting or a joke out to that count.
 const LENGTH = 'this overrides any other note about length';
 const SHORT = 'A greeting, thanks, small talk or a joke gets only a sentence or two (a joke is just the joke), whatever the length below.';
@@ -59,13 +59,7 @@ const NORMAL = `${SHORT} Length: for a real question, about 3 to 5 sentences, en
 export const RESPONSE_STYLES = {
   concise: { label: 'Concise', prompt: `Get straight to the point. Length: one or two sentences (${LENGTH}).`, maxTokens: 200 },
   normal: { label: 'Normal', prompt: NORMAL, maxTokens: 500 },
-  chatty: { label: 'Chatty', prompt: `Be conversational and warm, like a friend. ${SHORT} Length: for a real question, about 4 to 6 sentences (${LENGTH}). End with a short follow-up question about the user.`, maxTokens: 600 },
   detailed: { label: 'Detailed', prompt: `${SHORT} For a real question, give a thorough answer covering the key steps or reasons. Length: 2 to 4 short paragraphs, roughly 150 to 300 words, separated by blank lines (${LENGTH}).`, maxTokens: 1000 },
-  // Tone words alone ("playful") barely change a small model's reply, so each
-  // tone names what it looks like.
-  friendly: { label: 'Friendly', prompt: `Be warm and encouraging: notice how the user might feel and cheer them on. ${NORMAL}`, maxTokens: 500 },
-  professional: { label: 'Professional', prompt: `Be precise and neutral, like a capable colleague: no exclamation marks, cute particles or emoji, and lead with the answer. ${NORMAL}`, maxTokens: 500 },
-  playful: { label: 'Playful', prompt: `Be playful and witty: use a pun, a funny comparison or a bit of teasing, while still answering the question. ${NORMAL}`, maxTokens: 500 },
 };
 
 export const MAX_INSTRUCTIONS = 500;

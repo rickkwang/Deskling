@@ -75,30 +75,6 @@
           <select id="model" class="popup"></select>
         </div>
       </div>
-      <h2 class="heading">Focus timer</h2>
-      <div class="card rows">
-        <div class="row">
-          <label class="label" for="focus-h"><span>Focus</span><small>Each session</small></label>
-          <span class="duration" id="focus-duration" role="group" aria-label="Focus length">
-            <input type="number" id="focus-h" class="field" data-unit="3600" min="0" step="1" aria-label="Hours"><span>h</span>
-            <input type="number" class="field" data-unit="60" min="0" max="59" step="1" aria-label="Minutes"><span>min</span>
-            <input type="number" class="field" data-unit="1" min="0" max="59" step="1" aria-label="Seconds"><span>s</span>
-          </span>
-        </div>
-        <div class="row">
-          <label class="label" for="break-h"><span>Break</span><small>Starts on its own</small></label>
-          <span class="duration" id="break-duration" role="group" aria-label="Break length">
-            <input type="number" id="break-h" class="field" data-unit="3600" min="0" step="1" aria-label="Hours"><span>h</span>
-            <input type="number" class="field" data-unit="60" min="0" max="59" step="1" aria-label="Minutes"><span>min</span>
-            <input type="number" class="field" data-unit="1" min="0" max="59" step="1" aria-label="Seconds"><span>s</span>
-          </span>
-        </div>
-        <div class="row">
-          <label class="label" for="timer-sound"><span>Sound</span><small>Plays when a session or break ends</small></label>
-          <select id="timer-sound" class="popup"></select>
-        </div>
-      </div>
-      <p class="help">Start it by right-clicking the character, then Focus Timer.</p>
       <h2 class="heading">Claude Code</h2>
       <div class="card rows">
         <div class="row">
@@ -107,12 +83,39 @@
         </div>
       </div>
       <p class="help" id="claude-help"></p>
-      <div class="instructions-head">
-        <label class="heading" for="instructions">Instructions</label>
-        <span id="count">0/500</span>
-      </div>
-      <textarea id="instructions" maxlength="500" rows="4" placeholder="e.g. Call me Captain, and explain things with sailing metaphors."></textarea>
-      <p class="help">Tell the assistant how to behave. Saved on this Mac and applied to every conversation.</p>
+      <details class="advanced">
+        <summary class="advanced-toggle">Advanced</summary>
+        <h2 class="heading">Focus timer</h2>
+        <div class="card rows">
+          <div class="row">
+            <label class="label" for="focus-h"><span>Focus</span><small>Each session</small></label>
+            <span class="duration" id="focus-duration" role="group" aria-label="Focus length">
+              <input type="number" id="focus-h" class="field" data-unit="3600" min="0" step="1" aria-label="Hours"><span>h</span>
+              <input type="number" class="field" data-unit="60" min="0" max="59" step="1" aria-label="Minutes"><span>min</span>
+              <input type="number" class="field" data-unit="1" min="0" max="59" step="1" aria-label="Seconds"><span>s</span>
+            </span>
+          </div>
+          <div class="row">
+            <label class="label" for="break-h"><span>Break</span><small>Starts on its own</small></label>
+            <span class="duration" id="break-duration" role="group" aria-label="Break length">
+              <input type="number" id="break-h" class="field" data-unit="3600" min="0" step="1" aria-label="Hours"><span>h</span>
+              <input type="number" class="field" data-unit="60" min="0" max="59" step="1" aria-label="Minutes"><span>min</span>
+              <input type="number" class="field" data-unit="1" min="0" max="59" step="1" aria-label="Seconds"><span>s</span>
+            </span>
+          </div>
+          <div class="row">
+            <label class="label" for="timer-sound"><span>Sound</span><small>Plays when a session or break ends</small></label>
+            <select id="timer-sound" class="popup"></select>
+          </div>
+        </div>
+        <p class="help">Start it by right-clicking the character, then Focus Timer.</p>
+        <div class="instructions-head">
+          <label class="heading" for="instructions">Instructions</label>
+          <span id="count">0/500</span>
+        </div>
+        <textarea id="instructions" maxlength="500" rows="4" placeholder="e.g. Call me Captain, and explain things with sailing metaphors."></textarea>
+        <p class="help">Tell the assistant how to behave. Saved on this Mac and applied to every conversation.</p>
+      </details>
     </section>
   </main>
 
