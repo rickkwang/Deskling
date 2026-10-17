@@ -411,7 +411,11 @@ function showBalloon({ focus = false } = {}) {
   // (an "open" sent now would be lost, and the balloon would stay up with its
   // content never brought in).
   if (!balloon.loaded || (balloonGlass() && !balloon.mask)) return;
-  if (balloon.hiddenForDrag || !win?.isVisible()) return;
+  if (balloon.hiddenForDrag || !win?.isVisible()) {
+    // Not shown now: a focus request must not wait for some later, unrelated show.
+    balloon.focus = false;
+    return;
+  }
   const opening = !balloon.shown; // (re)appearing, or caught while fading out
   stopFollowing();
   balloon.shown = true;
@@ -1232,6 +1236,8 @@ function registerIpc() {
   ipcMain.handle('characters:delete', (_e, id) => deleteCharacter(id));
   ipcMain.on('characters:copy-prompt', () => clipboard.writeText(SHEET_PROMPT));
   ipcMain.on('win:hide', () => {
+    // The Hide animation of a switch-off finishes after the switch was turned
+    // back on: show the pet again instead of hiding it.
     if (settings.enabled) return win.webContents.send('pet:visibility', 'show');
     hideBalloon(); // already faded out by the pet before its Hide animation
     bubbleWin?.hide();
