@@ -188,13 +188,13 @@ export function offlineReason({ enabled, available, model }) {
   return model ? null : 'noModel';
 }
 
-// The Model row's note in Assistant Settings: what to do so the pet can chat.
+// The Model row's note in Settings: what to do so the pet can chat.
 // The example model is the one the README installs.
 const PULL_COMMAND = 'ollama pull qwen2.5:1.5b';
 export function modelNote(reason) {
   return {
     off: 'Turn Chat on to talk with the pet.',
-    unavailable: 'Ollama is not running. Install it from ollama.com, then turn Chat on.',
+    unavailable: 'Ollama is not running. Install it from ollama.com, or start it.',
     noModel: `No model installed. Run ${PULL_COMMAND} in Terminal.`,
   }[reason] ?? 'Local Ollama model';
 }

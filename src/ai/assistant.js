@@ -49,7 +49,7 @@ export function languageRule(text, locale = '') {
   return `Reply in the language of the user's latest message, ${unless}.`;
 }
 
-// Response Style options shown in Assistant Settings. Each sets the reply's
+// Response Style options shown in Settings. Each sets the reply's
 // length for a real question as a concrete target (small local models follow
 // numbers far better than "brief"); the tone styles answer at Normal length.
 // SHORT keeps them from padding a greeting or a joke out to that count.

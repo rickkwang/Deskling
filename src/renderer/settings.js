@@ -366,7 +366,11 @@ function renderClaude() {
   note.classList.toggle('warn', Boolean(claude.error || broken));
   note.textContent = claude.error
     || (broken ? `Its hooks are missing from ${claude.file}.` : 'Busy while Claude Code works; speaks up when it’s done or needs you');
-  help.replaceChildren(`Adds hooks to ${claude.file} (backed up first). Claude Code picks them up right away.`);
+  // What is written where, and how to undo it, before the user turns it on.
+  if (!claude.error) help.replaceChildren(settings.claudeCode
+    ? `Deskling's hooks are in ${claude.file}. Turning this off removes them. Each change first copies the existing file to ${claude.file}.deskling-backup.`
+    : `Turning this on adds Deskling's hooks to ${claude.file}. They only talk to Deskling on this Mac, and turning this off removes them.`);
+  else help.replaceChildren();
   if (broken && !claude.error) {
     const fix = document.createElement('button');
     fix.type = 'button';
