@@ -229,7 +229,3 @@ form.addEventListener('submit', (e) => {
   sendBtn.disabled = true;
   api.submit(text);
 });
-document.addEventListener('contextmenu', (e) => {
-  e.preventDefault();
-  window.pet.contextMenu();
-});

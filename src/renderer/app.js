@@ -420,7 +420,9 @@ document.addEventListener('mouseleave', () => { if (!press) setInteractive(false
 // Dragging is driven by main: it follows the cursor from where the press
 // started and folds the balloon away until the pet is dropped.
 petEl.addEventListener('pointerdown', (e) => {
-  if (e.button !== 0) return;
+  if (e.button !== 0 || e.ctrlKey) return;
+  // The automated flow uses synthetic pointers; a real mouse must not join in.
+  if (selftest && !selftest.edge && e.isTrusted) return;
   try { petEl.setPointerCapture(e.pointerId); } catch { /* synthetic pointer */ }
   press = { x: e.screenX, y: e.screenY, dragging: false };
   window.pet.dragPress();
@@ -500,11 +502,6 @@ function poke() {
   }
   if (settings.ollama !== false) checkAi();
 }
-
-document.addEventListener('contextmenu', (e) => {
-  e.preventDefault();
-  window.pet.contextMenu();
-});
 
 // ---- main-process events ----------------------------------------------------
 

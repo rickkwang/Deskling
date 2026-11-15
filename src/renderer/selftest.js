@@ -42,7 +42,16 @@ export async function runSelftest({ runtime, petEl, api, greeted, log, quiet }) 
 
     // Click the pet (pointer down/up without movement = click, not drag).
     const r = petEl.getBoundingClientRect();
-    const at = { clientX: r.x + r.width / 2, clientY: r.y + r.height / 2, screenX: 0, screenY: 0, pointerId: 1, button: 0, bubbles: true };
+    const at = { clientX: r.x + r.width / 2, clientY: r.y + r.height / 2, screenX: window.screenX + r.x + r.width / 2, screenY: window.screenY + r.y + r.height / 2, pointerId: 1, button: 0, bubbles: true };
+
+    // macOS Control-click is only a context menu: it must not toggle the balloon.
+    const beforeControl = `${rt.state}:${api.balloonOpen()}`;
+    const control = { ...at, ctrlKey: true };
+    petEl.dispatchEvent(new PointerEvent('pointerdown', control));
+    petEl.dispatchEvent(new PointerEvent('pointerup', control));
+    const controlClick = beforeControl === `${rt.state}:${api.balloonOpen()}`;
+    log(`control-click leaves the pet alone: ${controlClick ? 'PASS' : 'FAIL'}`);
+
     petEl.dispatchEvent(new PointerEvent('pointerdown', at));
     petEl.dispatchEvent(new PointerEvent('pointerup', at));
     await until(() => rt.state === 'listening', 2000, 'listening');
@@ -64,7 +73,7 @@ export async function runSelftest({ runtime, petEl, api, greeted, log, quiet }) 
     await place('reply');
 
     const expected = ['idle', 'listening', 'thinking', 'speaking', 'idle'];
-    const ok = expected.every((s, i) => states[i] === s);
+    const ok = controlClick && expected.every((s, i) => states[i] === s);
     log(`flow: ${states.join(' -> ')}  ${ok ? 'PASS' : `FAIL (expected ${expected.join(' -> ')})`}`);
 
     // Behavior settings: Instructions + Response Style reach the model, and with

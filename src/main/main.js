@@ -277,6 +277,7 @@ function createWindow() {
   });
   win.setAlwaysOnTop(true, 'floating');
   win.setIgnoreMouseEvents(true, { forward: true });
+  win.webContents.on('context-menu', () => buildContextMenu().popup({ window: win }));
   win.loadFile(path.join(ROOT, 'src/renderer/index.html'));
   listenRenderer(win.webContents, 'pet');
   win.once('ready-to-show', () => { if (settings.enabled || SELFTEST) win.showInactive(); });
@@ -337,6 +338,13 @@ function createBubbleWindow() {
     webPreferences: { preload: path.join(ROOT, 'src/main/preload.cjs'), contextIsolation: true },
   });
   bubbleWin.setAlwaysOnTop(true, 'floating');
+  bubbleWin.webContents.on('context-menu', (_e, params) => {
+    const menu = params.isEditable ? Menu.buildFromTemplate([
+      { role: 'cut' }, { role: 'copy' }, { role: 'paste' },
+      { type: 'separator' }, { role: 'selectAll' },
+    ]) : buildContextMenu();
+    menu.popup({ window: bubbleWin });
+  });
   applyBalloonMaterial();
   bubbleWin.loadFile(path.join(ROOT, 'src/renderer/bubble.html'));
   listenRenderer(bubbleWin.webContents, 'balloon');
@@ -1220,7 +1228,7 @@ function endDrag() {
   nativeDrag = null;
   if (balloon.hiddenForDrag) {
     balloon.hiddenForDrag = false;
-    if (balloon.visible) showBalloon();
+    if (balloon.visible) showBalloon({ focus: Boolean(balloon.content?.chat) });
   }
 }
 
