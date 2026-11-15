@@ -453,6 +453,14 @@ function endPress() {
 petEl.addEventListener('pointerup', endPress);
 document.addEventListener('pointerup', endPress);
 petEl.addEventListener('lostpointercapture', () => { if (press?.dragging) endPress(); });
+// A system gesture (Mission Control, Stage Manager, etc.) can cancel the
+// pointer stream without a pointerup: end a drag or cancel a pending press.
+petEl.addEventListener('pointercancel', () => {
+  if (!press) return;
+  if (press.dragging) return endPress();
+  clearTimeout(press.timer);
+  press = null;
+});
 
 // Every click plays a random animation (click.js): one of the attention
 // animations when the balloon opens, a brief nod when it closes.

@@ -1262,9 +1262,10 @@ function registerIpc() {
     }
     clearInterval(dragTimer);
     dragTimer = null;
+    clearInterval(releaseWatch);
+    releaseWatch = null;
     nativeDrag = startNativeDrag(win) ? { spaceChanged: false } : null;
     if (nativeDrag) {
-      clearInterval(releaseWatch);
       releaseWatch = setInterval(() => { if (!leftButtonDown()) endDrag(); }, 16);
       return;
     }
@@ -1273,6 +1274,12 @@ function registerIpc() {
     const hz = screen.getDisplayNearestPoint(press.cursor).displayFrequency || 60;
     dragTimer = setInterval(followCursor, Math.max(4, Math.floor(1000 / hz)));
     followCursor();
+    // macOS fallback: main watches a held button so a lost pointerup
+    // (Mission Control, Stage Manager, system gesture) cannot strand the drag.
+    // False also means koffi is unavailable: keep renderer-driven ending.
+    if (leftButtonDown()) {
+      releaseWatch = setInterval(() => { if (!leftButtonDown()) endDrag(); }, 16);
+    }
   });
   ipcMain.handle('drag:end', () => {
     if (nativeDrag && leftButtonDown()) return;
