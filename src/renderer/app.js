@@ -669,6 +669,7 @@ if (selftest) {
       type: (text) => { listen(); return ask(text); },
       text: () => (content.dots ? '' : content.text),
       balloonOpen: () => balloonOpen,
+      openChat: () => openBubble({ focus: true }),
     };
     runSelftest({ runtime: () => runtime, petEl, api, greeted, log });
   }

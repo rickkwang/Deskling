@@ -1363,6 +1363,8 @@ function registerIpc() {
   ipcMain.on('claude:reconnect', () => connectClaudeCode(true));
 
   ipcMain.handle('audit:characters', () => listCharacters().map((c) => loadCharacter(c.id)));
+  // The right-click menu's top-level items (the native popup itself is not visible to the page).
+  ipcMain.handle('selftest:menu', () => buildContextMenu().items.map((item) => item.label));
   // Where the feet actually are vs. where they should be (macOS may clamp windows).
   ipcMain.handle('selftest:geometry', () => {
     const b = win.getBounds();

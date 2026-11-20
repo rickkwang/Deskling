@@ -51,6 +51,10 @@ export async function runSelftest({ runtime, petEl, api, greeted, log }) {
     petEl.dispatchEvent(new PointerEvent('pointerup', control));
     const controlClick = beforeControl === `${rt.state}:${api.balloonOpen()}`;
     log(`control-click leaves the pet alone: ${controlClick ? 'PASS' : 'FAIL'}`);
+    // The right-click menu has no Speech item (the speech setting is gone).
+    const menu = await window.pet.selftest.menu();
+    const menuOk = menu.includes('Chat…') && !menu.some((label) => /speech/i.test(label));
+    log(`context menu: ${menu.join(' | ')} ${menuOk ? 'PASS' : 'FAIL'}`);
 
     petEl.dispatchEvent(new PointerEvent('pointerdown', at));
     petEl.dispatchEvent(new PointerEvent('pointerup', at));
@@ -76,6 +80,21 @@ export async function runSelftest({ runtime, petEl, api, greeted, log }) {
     const ok = controlClick && expected.every((s, i) => states[i] === s);
     log(`flow: ${states.join(' -> ')}  ${ok ? 'PASS' : `FAIL (expected ${expected.join(' -> ')})`}`);
 
+    // Dragging folds the balloon away and reopens it where the pet lands; the chat must survive.
+    api.openChat();
+    await wait(400);
+    const chatBefore = `${rt.state}:${api.text()}`;
+    const drag = { ...at, pointerId: 2 };
+    const moved = { ...drag, clientX: at.clientX + 40, screenX: at.screenX + 40 };
+    petEl.dispatchEvent(new PointerEvent('pointerdown', drag));
+    await wait(50);
+    petEl.dispatchEvent(new PointerEvent('pointermove', moved));
+    await wait(200);
+    petEl.dispatchEvent(new PointerEvent('pointerup', moved));
+    await wait(800);
+    const dragOk = api.balloonOpen() && chatBefore === `${rt.state}:${api.text()}`;
+    log(`drag keeps the chat: ${chatBefore === `${rt.state}:${api.text()}` ? 'same state and text' : 'CHANGED'}, balloon ${api.balloonOpen() ? 'open' : 'closed'} ${dragOk ? 'PASS' : 'FAIL'}`);
+
     // Behavior settings: Instructions + Response Style reach the model.
     window.pet.setSettings({ responseStyle: 'concise', instructions: 'Always address the user as Captain.' });
     await wait(300);
@@ -96,7 +115,7 @@ export async function runSelftest({ runtime, petEl, api, greeted, log }) {
     await wait(300);
     await capture('7-after-show');
     log(`visible at every checkpoint: ${vanished.length ? `FAIL (blank at ${vanished.join(', ')})` : 'PASS'}`);
-    done(ok && captain && !vanished.length ? 0 : 1);
+    done(ok && menuOk && dragOk && captain && !vanished.length ? 0 : 1);
   } catch (e) {
     log(`FAIL: ${e.message}; states so far: ${states.join(' -> ')}`);
     await capture('fail');

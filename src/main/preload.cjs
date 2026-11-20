@@ -80,5 +80,6 @@ contextBridge.exposeInMainWorld('pet', {
     capture: (name) => ipcRenderer.invoke('selftest:capture', name),
     done: (code) => ipcRenderer.send('selftest:done', code),
     geometry: () => ipcRenderer.invoke('selftest:geometry'),
+    menu: () => ipcRenderer.invoke('selftest:menu'),
   },
 });
