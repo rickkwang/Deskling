@@ -351,7 +351,6 @@ soundSelect.addEventListener('change', () => {
 const bind = (id, key, prop = 'checked') => $(id).addEventListener('change', (e) => window.pet.setSettings({ [key]: e.target[prop] }));
 bind('#enabled', 'enabled');
 bind('#greeting', 'greeting');
-bind('#speech', 'speech');
 bind('#style', 'responseStyle', 'value');
 bind('#model', 'model', 'value');
 bind('#claude-code', 'claudeCode');
@@ -439,7 +438,6 @@ function render() {
   if (document.activeElement !== scaleInput) scaleInput.value = settings.scale ?? 1;
   showScale();
   $('#greeting').checked = settings.greeting;
-  $('#speech').checked = settings.speech;
   styleSelect.value = settings.responseStyle;
   for (const [kind, key] of DURATIONS) {
     if (!durationFields(kind).includes(document.activeElement)) showDuration(kind, settings[key]);

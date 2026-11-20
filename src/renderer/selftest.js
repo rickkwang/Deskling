@@ -5,7 +5,7 @@
 
 const QUESTION = 'In one short sentence: what is a paperclip for?';
 
-export async function runSelftest({ runtime, petEl, api, greeted, log, quiet }) {
+export async function runSelftest({ runtime, petEl, api, greeted, log }) {
   const { capture: shot, done } = window.pet.selftest;
   // Every checkpoint also asserts the character is on screen (not a blank frame).
   const vanished = [];
@@ -76,9 +76,8 @@ export async function runSelftest({ runtime, petEl, api, greeted, log, quiet }) 
     const ok = controlClick && expected.every((s, i) => states[i] === s);
     log(`flow: ${states.join(' -> ')}  ${ok ? 'PASS' : `FAIL (expected ${expected.join(' -> ')})`}`);
 
-    // Behavior settings: Instructions + Response Style reach the model, and with
-    // Speech on the character stays in `speaking` until the voice finishes.
-    window.pet.setSettings({ responseStyle: 'concise', instructions: 'Always address the user as Captain.', speech: !quiet });
+    // Behavior settings: Instructions + Response Style reach the model.
+    window.pet.setSettings({ responseStyle: 'concise', instructions: 'Always address the user as Captain.' });
     await wait(300);
     api.type('Say hi to me.');
     await until(() => rt.state === 'speaking', 90000, 'speaking (behavior)');
@@ -86,8 +85,8 @@ export async function runSelftest({ runtime, petEl, api, greeted, log, quiet }) 
     await until(() => rt.state === 'idle', 90000, 'idle (behavior)');
     const reply = api.text();
     const captain = /captain|船长/i.test(reply);
-    log(`behavior: "${reply}" — instructions ${captain ? 'PASS' : 'FAIL'}; speaking held ${Math.round(performance.now() - ts)} ms${quiet ? "" : " with speech on"}`);
-    window.pet.setSettings({ responseStyle: 'normal', instructions: '', speech: false });
+    log(`behavior: "${reply}" — instructions ${captain ? 'PASS' : 'FAIL'}; speaking held ${Math.round(performance.now() - ts)} ms`);
+    window.pet.setSettings({ responseStyle: 'normal', instructions: '' });
 
     for (const action of ['confused', 'acknowledge', 'getAttention', 'explain', 'hide', 'show']) {
       const res = await rt.act(action);

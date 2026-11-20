@@ -1,6 +1,5 @@
 import { CharacterRuntime } from '../runtime/character-runtime.js';
 import { validateCharacter } from '../character/validate.js';
-import { speak, cancelSpeech } from './speech.js';
 import { clock } from '../main/focus-timer.js';
 import { Pokes, offlineReason } from '../ai/offline-lines.js';
 import { clickAnimations, pickClick } from '../character/click.js';
@@ -137,7 +136,6 @@ function hideBubble() {
 function closeBubble() {
   if (showingNotice()) window.pet.claude.dismiss(); // seen
   hideBubble();
-  cancelSpeech();
   if (busy) window.pet.cancel();
   if (runtime.state !== 'hidden') runtime.setState('idle');
 }
@@ -245,7 +243,6 @@ async function ask(text) {
   if (busy || !text) return;
   busy = true;
   streamed = '';
-  cancelSpeech();
   content = { text: '', error: false, dots: true };
   if (balloonOpen) renderBalloon();
   else openBubble();
@@ -256,9 +253,8 @@ async function ask(text) {
   if (res.ok && res.text.trim()) {
     say(res.text.trim());
     unread = content.text;
-    // Like an Agent Speak request: stay in speaking until the gesture and the
-    // spoken text (Speech setting) are finished, then idle.
-    await Promise.all([runtime.settle(), settings.speech ? speak(res.text.trim()) : null]);
+    // Like an Agent Speak request: stay in speaking until the gesture is finished, then idle.
+    await runtime.settle();
     if (runtime.state === 'speaking') runtime.setState('idle');
   } else if (res.error === 'ABORTED') {
     renderBalloon();
@@ -321,7 +317,6 @@ async function remind(info) {
   if (busy) { pendingReminder = info; return; }
   pendingReminder = null;
   busy = true;
-  cancelSpeech();
   content = { text: '', error: false, dots: true };
   // Done focusing: congratulate; break over: get the user's attention.
   runtime.setState('idle');
@@ -333,7 +328,6 @@ async function remind(info) {
   unread = text;
   backToWork(); // it went idle while busy, which kept it from going back
   if (pendingReminder) return remind(pendingReminder);
-  if (settings.speech) speak(text);
   showNotice();
 }
 window.pet.timer.onEnd(remind);
@@ -389,7 +383,6 @@ function showNotice() {
   noticeId = notice.id;
   unread = '';
   announce(before + text, { ...look, gesture: GESTURES[notice.kind] });
-  if (settings.speech) speak(notice.line);
 }
 
 window.pet.claude.onStatus((status) => {
@@ -526,7 +519,6 @@ window.pet.onSettings((next) => {
   settings = next;
   document.body.dataset.theme = settings.balloon;
   if (rescale) applyLayout();
-  if (!settings.speech) cancelSpeech();
   if (chat) toggleChat();
 });
 
@@ -540,7 +532,6 @@ function toggleChat() {
 }
 window.pet.onChatReset(() => {
   if (busy) window.pet.cancel();
-  cancelSpeech();
   if (offline()) sayOffline();
   else say(greeting());
   runtime.setState('idle');
@@ -563,7 +554,6 @@ window.pet.onCharacter(async (next) => {
   switching = true;
   entering = true; // like any entrance: no work or notices until it's over
   if (busy) window.pet.cancel();
-  cancelSpeech();
   hideBubble();
   try {
     while (wanted) {
@@ -680,6 +670,6 @@ if (selftest) {
       text: () => (content.dots ? '' : content.text),
       balloonOpen: () => balloonOpen,
     };
-    runSelftest({ runtime: () => runtime, petEl, api, greeted, log, quiet: selftest.quiet });
+    runSelftest({ runtime: () => runtime, petEl, api, greeted, log });
   }
 }

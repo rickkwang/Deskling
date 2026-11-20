@@ -85,7 +85,7 @@ let settings = {
   scale: 1,
   balloon: 'classic', // speech balloon theme (BALLOON_THEMES)
   // Behavior (Settings)
-  enabled: true, greeting: true, speech: false, responseStyle: 'normal', instructions: '',
+  enabled: true, greeting: true, responseStyle: 'normal', instructions: '',
   focusSeconds: 25 * 60, breakSeconds: 5 * 60, timerSound: 'indigo', // Focus Timer
   claudeCode: false, // work along with Claude Code (hooks in its settings.json)
   ollama: true, // chat through a local Ollama model; off, the pet says preset lines
@@ -817,7 +817,6 @@ function buildContextMenu() {
   return Menu.buildFromTemplate([
     { label: 'Chat…', click: () => win.webContents.send('pet:chat') },
     { type: 'separator' },
-    { label: 'Speech', type: 'checkbox', checked: settings.speech, click: (item) => updateSettings({ speech: item.checked }) },
     {
       label: 'Character',
       submenu: listCharacters().map((c) => ({
@@ -1244,7 +1243,7 @@ function registerIpc() {
     assistant.setBehavior({ responseStyle: settings.responseStyle, instructions: settings.instructions, claudeCode: settings.claudeCode });
     // Not held up by Ollama starting: the pet says hello once it's up.
     const ai = await assistant.refresh(settings.model, { wait: false });
-    return { character, ai, settings: publicSettings(), selftest: SELFTEST && { quiet: process.argv.includes('--quiet'), edge: process.argv.includes('--edge') || process.argv.includes('--edge-open'), edgeOpen: process.argv.includes('--edge-open'), hold: Number(arg('hold') || 2500) } };
+    return { character, ai, settings: publicSettings(), selftest: SELFTEST && { edge: process.argv.includes('--edge') || process.argv.includes('--edge-open'), edgeOpen: process.argv.includes('--edge-open'), hold: Number(arg('hold') || 2500) } };
   });
 
   ipcMain.on('mouse:interactive', (_e, interactive) => {
