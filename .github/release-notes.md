@@ -1,3 +1,5 @@
+**Fixed in 0.3.19:** if the pet or its balloon stops responding to clicks while still animating, Deskling now recovers the window automatically without losing your conversation. Dragging the pet no longer strands hover or click-through afterwards, and Electron is updated to 44.11.5.
+
 **Improved in 0.3.18:** when the pet can't chat (Ollama isn't installed or running, or it has no model), the chat input is gone as soon as you click it, not after a failed message; one click shows a line, the next puts it away, the one after brings a new line. Settings now has **Get Ollama** and **Copy command** (the `ollama pull` that installs a model) right where it says why the pet can't chat.
 
 **Fixed in 0.3.17:** if Ollama quits while the pet is running, the pet goes back to its preset lines (and the input goes away) instead of showing "Something went wrong: fetch failed".
