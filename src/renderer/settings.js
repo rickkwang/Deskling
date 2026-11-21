@@ -304,7 +304,21 @@ function renderModels() {
   } else {
     modelSelect.add(new Option(ai.available ? 'No local models' : 'Ollama not running', ''));
   }
-  $('#model-note').textContent = modelNote(offlineReason({ ...ai, enabled: settings.ollama !== false }));
+  const reason = offlineReason({ ...ai, enabled: settings.ollama !== false });
+  const note = $('#model-note');
+  note.textContent = modelNote(reason);
+  const action = { unavailable: ['Get Ollama', 'get'], noModel: ['Copy command', 'copy'] }[reason];
+  if (action) {
+    const help = document.createElement('button');
+    help.type = 'button';
+    help.className = 'link';
+    help.textContent = action[0];
+    help.addEventListener('click', () => {
+      window.pet.ollamaHelp(action[1]);
+      if (action[1] === 'copy') help.textContent = 'Copied';
+    });
+    note.append(' ', help);
+  }
   modelSelect.disabled = !ai.models.length || !settings.ollama;
 }
 // Switched on: Ollama starts if it isn't running; look again once it's up.

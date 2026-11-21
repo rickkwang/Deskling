@@ -12,6 +12,7 @@ import { FocusTimer, LIMITS, validSeconds, PRESETS, SOUNDS, duration, minutesLef
 import { checkForUpdate, prepareInstall, releasePage } from './updater.js';
 import { ClaudeSessions, claudeSettingsFile, hooksInstalled, listen, readClaudeSettings, setHooks } from './claude-code.js';
 import { openLog, readTail, teeConsole } from './desklog.js';
+import { PULL_COMMAND } from '../ai/offline-lines.js';
 import { buildReport, chatFacts, NEW_BUG_URL } from './diagnostics.js';
 import { decodePng, encodePng } from '../character/png-codec.js';
 import { aboutOf, cutSheet, described, idFromName, makeCharacter, renamed } from '../character/sheet-import.js';
@@ -1353,6 +1354,12 @@ function registerIpc() {
     }
   });
   ipcMain.on('ai:cancel', () => assistant.cancel());
+  // Settings' Model note: get Ollama, or copy the command that installs a model.
+  ipcMain.on('ollama:help', (_e, what) => {
+    if (QA) return;
+    if (what === 'get') shell.openExternal('https://ollama.com/download');
+    else if (what === 'copy') clipboard.writeText(PULL_COMMAND);
+  });
   ipcMain.handle('ai:status', () => assistant.refresh(settings.model));
   ipcMain.on('update:seen', (_e, version) => updateSettings({ updateSeen: version }));
   ipcMain.on('timer:action', (_e, action) => timerAction(action));

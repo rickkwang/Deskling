@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('pet', {
   send: (text) => ipcRenderer.invoke('ai:send', text),
   cancel: () => ipcRenderer.send('ai:cancel'),
   aiStatus: () => ipcRenderer.invoke('ai:status'),
+  ollamaHelp: (what) => ipcRenderer.send('ollama:help', what),
   onToken: on('ai:token'),
   onCharacter: on('pet:character'),
   onRenamed: on('pet:renamed'),
