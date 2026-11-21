@@ -465,10 +465,10 @@ petEl.addEventListener('pointercancel', () => {
 // Every click plays a random animation (click.js): one of the attention
 // animations when the balloon opens, a brief nod when it closes.
 function onPetClick() {
-  // Can't chat: every click brings a new line (and a run of quick clicks, a
-  // reaction); the balloon folds away on its own. A Claude Code notice is
-  // closed as usual, which marks it seen.
-  if (!busy && offline() && !showingNotice()) return poke();
+  // Can't chat: a click brings a line, the next click puts it away (so it
+  // never lingers on screen), and the one after brings a new one. A Claude
+  // Code notice is closed as usual, which marks it seen.
+  if (!busy && offline() && !showingNotice()) return balloonOpen && showingOffline() ? closeBubble() : poke();
   if (balloonOpen && !busy && runtime.state !== 'listening') {
     listen({ clicked: true });
     openBubble({ focus: true });
