@@ -450,14 +450,22 @@ function endPress() {
   if (!dragging) return onPetClick();
   window.pet.dragEnd().then(() => log('drag end'));
 }
-petEl.addEventListener('pointerup', endPress);
-document.addEventListener('pointerup', endPress);
-petEl.addEventListener('lostpointercapture', () => { if (press?.dragging) endPress(); });
-// A system gesture (Mission Control, Stage Manager, etc.) can cancel the
-// pointer stream without a pointerup: end a drag or cancel a pending press.
-petEl.addEventListener('pointercancel', () => {
+function cancelPress() {
   if (!press) return;
   if (press.dragging) return endPress();
+  clearTimeout(press.timer);
+  press = null;
+}
+petEl.addEventListener('pointerup', endPress);
+document.addEventListener('pointerup', endPress);
+petEl.addEventListener('lostpointercapture', cancelPress);
+// A system gesture (Mission Control, Stage Manager, etc.) can cancel the
+// pointer stream without a pointerup: end a drag or cancel a pending press.
+petEl.addEventListener('pointercancel', cancelPress);
+// macOS's native window drag swallows NSLeftMouseUp, so main signals when the
+// button came up to keep `press` from stranding hover/click-through updates.
+window.pet.onDragEnded(() => {
+  if (!press) return;
   clearTimeout(press.timer);
   press = null;
 });
@@ -647,13 +655,23 @@ renderTimer(await window.pet.timer.status());
 claude = await window.pet.claude.status();
 ai = init.ai;
 log(`ai: ${init.ai.available ? `ollama ok, local models [${init.ai.models.join(', ')}], using ${init.ai.model}` : `unavailable (${init.ai.error})`}`);
-// Greeting setting: "Say hello when the assistant opens" (the hello gesture
-// and balloon). Office characters' entrance is their Greeting either way.
-const greeted = runtime.show({ greet: settings.greeting });
-if (offline()) sayOffline();
-else say(greeting());
-if (settings.greeting) greeted.then(() => openBubble());
-greeted.then(() => { showNotice(); backToWork(); });
+let greeted;
+if (init.recover) {
+  // Seamless recovery after Chromium's WidgetInputHandler pipe died: draw the
+  // resting pose in place without replaying the entrance or overwriting the balloon.
+  balloonOpen = Boolean(init.balloonVisible);
+  if (init.balloonContent) content = { text: init.balloonContent.text || '', error: Boolean(init.balloonContent.error), dots: false };
+  greeted = runtime.play(character.states.idle.animations[0], { kind: 'idle' });
+  greeted.then(() => { showNotice(); backToWork(); });
+} else {
+  // Greeting setting: "Say hello when the assistant opens" (the hello gesture
+  // and balloon). Office characters' entrance is their Greeting either way.
+  greeted = runtime.show({ greet: settings.greeting });
+  if (offline()) sayOffline();
+  else say(greeting());
+  if (settings.greeting) greeted.then(() => openBubble());
+  greeted.then(() => { showNotice(); backToWork(); });
+}
 if (offline() && settings.ollama !== false) checkAi(); // Ollama starting with the app
 
 if (selftest) {

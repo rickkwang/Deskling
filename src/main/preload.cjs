@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('pet', {
   dragPress: () => ipcRenderer.send('drag:press'),
   dragStart: () => ipcRenderer.send('drag:start'),
   dragEnd: () => ipcRenderer.invoke('drag:end'),
+  onDragEnded: on('drag:ended'),
   layout: (geo) => ipcRenderer.invoke('win:layout', geo),
   hideWindow: () => ipcRenderer.send('win:hide'),
   contextMenu: () => ipcRenderer.send('menu:context'),

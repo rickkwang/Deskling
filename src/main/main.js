@@ -6,7 +6,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Assistant, RESPONSE_STYLES } from '../ai/assistant.js';
 import { DragFollower } from './drag-follow.js';
-import { leftButtonDown, startNativeDrag } from './native-drag.js';
+import { currentEventSummary, leftButtonDown, startNativeDrag } from './native-drag.js';
 import { setMaterialMask } from './glass-mask.js';
 import { FocusTimer, LIMITS, validSeconds, PRESETS, SOUNDS, duration, minutesLeft } from './focus-timer.js';
 import { checkForUpdate, prepareInstall, releasePage } from './updater.js';
@@ -60,6 +60,72 @@ let log = silentLog;
 let quitting = false;
 let lastCrashShown = 0;
 
+const RECOVERY_COOLDOWN_MS = 30_000;
+const lastRecovery = { pet: 0, balloon: 0 };
+let recoveringPet = false;
+
+// When Chromium's blink.mojom.WidgetInputHandler Mojo pipe is rejected by a
+// deserialization error, the renderer stays alive (animations keep playing)
+// while every input event stops getting ACKed and fires `unresponsive`. Probe
+// the renderer over a separate Mojo channel (executeJavaScript): if it replies
+// promptly, only the input pipe died — recreate the BrowserWindow for a fresh
+// WidgetInputHandler without losing conversation state.
+async function handleWindowFreeze(contents, label) {
+  const windowFor = () => (label === 'balloon' ? bubbleWin : label === 'settings' ? settingsWin : win);
+  const ev = currentEventSummary(windowFor());
+  const alive = await Promise.race([
+    contents.isDestroyed() ? Promise.resolve(false) : contents.executeJavaScript('1').then((v) => v === 1).catch(() => false),
+    new Promise((r) => setTimeout(() => r(false), 500)),
+  ]);
+  if (!alive) {
+    log.warn(`${label} window froze${ev ? ` (${ev})` : ''}`);
+    return;
+  }
+  const current = windowFor();
+  if (!current || current.isDestroyed() || current.webContents !== contents) return;
+  const canRecover = !QA && !quitting && (label === 'pet' || label === 'balloon')
+    && Date.now() - lastRecovery[label] >= RECOVERY_COOLDOWN_MS;
+  log.warn(`${label} window froze (input pipe dead${ev ? `, ${ev}` : ''})${canRecover ? ' — recovering' : ''}`);
+  if (!canRecover) return;
+  lastRecovery[label] = Date.now();
+  if (label === 'pet') recoverPetWindow();
+  else recoverBalloonWindow();
+}
+
+function recoverPetWindow() {
+  if (!win || win.isDestroyed()) return;
+  const old = win;
+  const wasVisible = old.isVisible();
+  const reopenBalloon = balloon.hiddenForDrag;
+  balloon.hiddenForDrag = false;
+  clearInterval(dragTimer);
+  dragTimer = null;
+  clearInterval(releaseWatch);
+  releaseWatch = null;
+  nativeDrag = null;
+  recoveringPet = true;
+  createWindow({
+    showNow: wasVisible,
+    replace: old,
+    onReady: reopenBalloon ? () => { if (balloon.visible) showBalloon({ focus: Boolean(balloon.content?.chat) }); } : null,
+  });
+}
+
+function recoverBalloonWindow() {
+  if (!bubbleWin || bubbleWin.isDestroyed()) return;
+  const old = bubbleWin;
+  clearInterval(fade);
+  fade = null;
+  stopFollowing();
+  balloon.loaded = false;
+  balloon.shown = false;
+  balloon.placed = '';
+  balloon.mask = null;
+  balloon.cut = '';
+  createBubbleWindow();
+  if (!old.isDestroyed()) old.destroy();
+}
+
 const listenRenderer = (contents, label) => {
   // The renderer's console is otherwise unheard of here: its errors would never
   // reach a report. debug/info stay out — they are the pet chattering, not a bug.
@@ -67,7 +133,7 @@ const listenRenderer = (contents, label) => {
     if (level === 'error' || level === 'warning') log.warn(`${label} ${level}: ${message}`);
   });
   contents.on('render-process-gone', (e, why) => log.error(`${label} renderer gone (${why?.reason})`));
-  contents.on('unresponsive', () => log.warn(`${label} window froze`));
+  contents.on('unresponsive', () => { handleWindowFreeze(contents, label); });
 };
 
 const reportablePaths = () => [ // nothing a report says may name this Mac: given paths and their real ones
@@ -255,9 +321,9 @@ function layoutWindow({ width, height, anchorX, anchorY, petW, petH, top = 0 }) 
   placeBalloon();
 }
 
-function createWindow() {
+function createWindow({ showNow, replace, onReady } = {}) {
   const p = petPoint();
-  win = new BrowserWindow({
+  const current = new BrowserWindow({
     width: WIN_W,
     height: WIN_H,
     x: p.x - anchor.x,
@@ -276,23 +342,36 @@ function createWindow() {
       nodeIntegration: false,
     },
   });
-  win.setAlwaysOnTop(true, 'floating');
-  win.setIgnoreMouseEvents(true, { forward: true });
-  win.webContents.on('context-menu', () => buildContextMenu().popup({ window: win }));
-  win.loadFile(path.join(ROOT, 'src/renderer/index.html'));
-  listenRenderer(win.webContents, 'pet');
-  win.once('ready-to-show', () => { if (settings.enabled || SELFTEST) win.showInactive(); });
+  win = current;
+  current.setAlwaysOnTop(true, 'floating');
+  current.setIgnoreMouseEvents(true, { forward: true });
+  current.webContents.on('context-menu', () => buildContextMenu().popup({ window: current }));
+  current.loadFile(path.join(ROOT, 'src/renderer/index.html'));
+  listenRenderer(current.webContents, 'pet');
+  let replaceTimer = null;
+  const finishReplace = () => {
+    clearTimeout(replaceTimer);
+    replaceTimer = null;
+    if (replace && !replace.isDestroyed()) replace.destroy();
+  };
+  current.once('ready-to-show', () => {
+    if (showNow ?? (settings.enabled || SELFTEST)) current.showInactive();
+    finishReplace();
+    onReady?.();
+  });
+  if (replace) replaceTimer = setTimeout(finishReplace, 3000);
   // While dragging, learn positions macOS refuses (see drag-follow.js).
-  win.on('move', () => {
-    const [x, y] = win.getPosition();
+  current.on('move', () => {
+    if (win !== current) return;
+    const [x, y] = current.getPosition();
     if (dragTimer) follower.observe({ x, y });
     // macOS is dragging: a balloon still fading out rides along.
     const f = nativeDrag && balloon.follow;
     if (f) bubbleWin.setPosition(x + f.dx, y + f.dy);
   });
   if (SELFTEST && process.argv.includes('--trace-drag')) {
-    win.on('move', () => console.log(`[move] ${Date.now() % 100000} ${JSON.stringify(win.getBounds())} visible=${win.isVisible()}`));
-    win.on('show', () => console.log(`[show] ${Date.now() % 100000} ${JSON.stringify(win.getBounds())}`));
+    current.on('move', () => console.log(`[move] ${Date.now() % 100000} ${JSON.stringify(current.getBounds())} visible=${current.isVisible()}`));
+    current.on('show', () => console.log(`[show] ${Date.now() % 100000} ${JSON.stringify(current.getBounds())}`));
   }
 }
 
@@ -1226,6 +1305,7 @@ function endDrag() {
     }, 100);
   }
   nativeDrag = null;
+  win.webContents.send('drag:ended');
   if (balloon.hiddenForDrag) {
     balloon.hiddenForDrag = false;
     if (balloon.visible) showBalloon({ focus: Boolean(balloon.content?.chat) });
@@ -1238,13 +1318,17 @@ function registerIpc() {
       const frame = arg('frame');
       return { character: loadCharacter(arg('preview') || settings.character), frame: frame != null ? Number(frame) : null };
     }
+    const recover = recoveringPet;
+    recoveringPet = false;
     const character = loadCharacter(settings.character);
-    assistant.setPersona(character.data.persona);
-    assistant.setEnabled(settings.ollama);
-    assistant.setBehavior({ responseStyle: settings.responseStyle, instructions: settings.instructions, claudeCode: settings.claudeCode });
+    if (!recover) {
+      assistant.setPersona(character.data.persona);
+      assistant.setEnabled(settings.ollama);
+      assistant.setBehavior({ responseStyle: settings.responseStyle, instructions: settings.instructions, claudeCode: settings.claudeCode });
+    }
     // Not held up by Ollama starting: the pet says hello once it's up.
     const ai = await assistant.refresh(settings.model, { wait: false });
-    return { character, ai, settings: publicSettings(), selftest: SELFTEST && { edge: process.argv.includes('--edge') || process.argv.includes('--edge-open'), edgeOpen: process.argv.includes('--edge-open'), hold: Number(arg('hold') || 2500) } };
+    return { character, ai, settings: publicSettings(), recover, balloonVisible: balloon.visible, balloonContent: recover ? balloon.content : null, selftest: SELFTEST && { edge: process.argv.includes('--edge') || process.argv.includes('--edge-open'), edgeOpen: process.argv.includes('--edge-open'), hold: Number(arg('hold') || 2500) } };
   });
 
   ipcMain.on('mouse:interactive', (_e, interactive) => {

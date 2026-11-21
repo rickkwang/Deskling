@@ -36,14 +36,17 @@ function load() {
 // response to the press or a move; otherwise (or off macOS) returns false.
 export function startNativeDrag(win) {
   const o = load();
-  if (!o) return false;
+  if (!o || !leftButtonDown()) return false;
   try {
     const event = o.send(o.send(o.cls('NSApplication'), o.sel('sharedApplication')), o.sel('currentEvent'));
     if (!event) return false;
     const type = Number(o.send(event, o.sel('type')));
     if (type !== MOUSE_DOWN && type !== MOUSE_DRAGGED) return false;
     const view = win.getNativeWindowHandle().readBigUInt64LE(0);
-    o.send1(o.send(view, o.sel('window')), o.sel('performWindowDragWithEvent:'), event);
+    const nsWin = o.send(view, o.sel('window'));
+    const eventWin = o.send(event, o.sel('window'));
+    if (!nsWin || (eventWin && eventWin !== nsWin)) return false;
+    o.send1(nsWin, o.sel('performWindowDragWithEvent:'), event);
     return true;
   } catch (e) {
     console.warn(`[drag] native drag failed: ${e.message}`);
@@ -59,5 +62,28 @@ export function leftButtonDown() {
     return (Number(o.send(o.cls('NSEvent'), o.sel('pressedMouseButtons'))) & 1) === 1;
   } catch {
     return false;
+  }
+}
+
+// Numeric-only summary of AppKit's current NSEvent for freeze diagnostics
+// (type, modifier flags, and whether it targets `win`; no text or paths).
+export function currentEventSummary(win) {
+  const o = load();
+  if (!o) return '';
+  try {
+    const event = o.send(o.send(o.cls('NSApplication'), o.sel('sharedApplication')), o.sel('currentEvent'));
+    if (!event) return 'event=none';
+    const type = Number(o.send(event, o.sel('type')));
+    const mods = Number(BigInt(o.send(event, o.sel('modifierFlags'))) & 0xffffffffn);
+    let sameWin = '';
+    if (win && !win.isDestroyed()) {
+      const view = win.getNativeWindowHandle().readBigUInt64LE(0);
+      const nsWin = o.send(view, o.sel('window'));
+      const eventWin = o.send(event, o.sel('window'));
+      sameWin = ` sameWin=${Boolean(nsWin && eventWin === nsWin)}`;
+    }
+    return `eventType=${type} mods=0x${mods.toString(16)}${sameWin}`;
+  } catch {
+    return '';
   }
 }
