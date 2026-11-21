@@ -126,6 +126,7 @@ function openBubble({ focus = false } = {}) {
   renderBalloon();
   window.pet.bubbleShow({ focus });
   foldLine();
+  if (focus && settings.ollama !== false) checkAi(); // Ollama may have quit since
 }
 
 function hideBubble() {
@@ -221,7 +222,11 @@ function checkAi() {
   checking ??= window.pet.aiStatus().then((next) => {
     ai = next;
     if (!offline() && showingOffline() && !busy) say(greeting());
-    else renderBalloon();
+    else if (offline() && balloonOpen && !busy && !showingOffline() && !showingNotice()) {
+      // Opened for typing, but Ollama is gone: a line instead of the input.
+      if (runtime.state === 'listening') runtime.setState('idle');
+      sayOffline();
+    } else renderBalloon();
   }).catch((e) => log(`ai status failed: ${e.message}`))
     .finally(() => { checking = null; });
   return checking;
