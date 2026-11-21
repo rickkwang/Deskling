@@ -1,3 +1,5 @@
+**Fixed in 0.3.17:** if Ollama quits while the pet is running, the pet goes back to its preset lines (and the input goes away) instead of showing "Something went wrong: fetch failed".
+
 **New in 0.3.16: Report a Problem.** When something goes wrong, right-click the pet (or its tray icon) and choose **Report a Problem…**: Deskling's facts — the version, how it is set, whether Ollama answered, and the last lines of its own error log — land on your clipboard, and the bug form opens in your browser. Nothing is sent on its own: you read, edit and paste the facts before submitting, and no paths survive in the text. Deskling also keeps that record itself now (`~/Library/Application Support/Deskling/deskling.log`, rotated at 256 KB), so a crash seen once can still be reported. 中文 issue 也欢迎。
 
 **Improved in 0.3.16:** right-clicking or dragging the pet no longer interrupts its chat, and system gestures no longer strand a drag or turn a cancelled press into a long-press menu. Speech is gone: replies are no longer read aloud, and the Speech switch and menu item are removed.
