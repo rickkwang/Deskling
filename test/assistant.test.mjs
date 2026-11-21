@@ -93,3 +93,28 @@ test('a timer remark stays in history but leaves a chat in progress alone', asyn
   assert.ok(sent.every((m) => Object.keys(m).join() === 'role,content'), 'no app-only fields reach the model');
   assert.equal(a.history.length, 4);
 });
+
+test('Ollama quitting after the model was picked reads as unavailable, not "fetch failed"', async () => {
+  const a = new Assistant();
+  a.setPersona({ systemPrompt: '' });
+  a.model = { name: 'stub' };
+  a.provider = {
+    chat: async () => { throw new TypeError('fetch failed'); },
+    detect: async () => ({ available: false, models: [], error: 'fetch failed' }),
+    pickModel: () => null,
+  };
+  await assert.rejects(a.send('hi'), { message: 'OLLAMA_UNAVAILABLE' });
+  assert.equal(a.model, null);
+});
+
+test('a cancelled chat stays a cancel and does not re-detect Ollama', async () => {
+  const a = new Assistant();
+  a.setPersona({ systemPrompt: '' });
+  a.model = { name: 'stub' };
+  a.provider = {
+    chat: async () => { throw new DOMException('aborted', 'AbortError'); },
+    detect: async () => { throw new Error('must not be called'); },
+  };
+  await assert.rejects(a.send('hi'), { name: 'AbortError' });
+  assert.equal(a.model.name, 'stub');
+});

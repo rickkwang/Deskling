@@ -168,7 +168,16 @@ export class Assistant {
       { role: 'user', content: text },
     ];
     const { maxTokens } = RESPONSE_STYLES[this.behavior.responseStyle];
-    const reply = await this.provider.chat({ model: this.model, messages, maxTokens, onToken, signal: this.abort.signal });
+    let reply;
+    try {
+      reply = await this.provider.chat({ model: this.model, messages, maxTokens, onToken, signal: this.abort.signal });
+    } catch (e) {
+      if (e.name === 'AbortError') throw e;
+      // Ollama quit after the model was picked: say so, instead of "fetch failed".
+      await this.refresh(this.preferred, { wait: false });
+      if (!this.model) throw new Error(this.status.available ? 'NO_LOCAL_MODEL' : 'OLLAMA_UNAVAILABLE');
+      throw e;
+    }
     // Kept in memory only (never saved), and only as much as the model sees.
     this.history.push({ role: 'user', content: text }, { role: 'assistant', content: reply });
     this.history = this.history.slice(-MAX_HISTORY);
